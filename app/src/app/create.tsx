@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -13,33 +13,88 @@ import {
   View,
 } from 'react-native';
 
+import DatePickerField from '@/components/DatePickerField';
 import PostMap from '@/components/PostMap';
 import { categories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
 import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
+import { geocodeAddress } from '@/lib/geocoding';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
 
 const DEFAULT_PICKUP_LOCATION = { lat: 52.2799, lng: 8.0472 };
+const GEOCODE_DEBOUNCE_MS = 900;
 // Official Osnabrück city page for scheduling a municipal Sperrmüll pickup.
 const MUNICIPAL_PICKUP_URL =
   'https://nachhaltig.osnabrueck.de/de/abfall/muellabfuhr/sperrmuell/sperrmuell-anmelden/';
 
 export default function CreateScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const { addPost } = usePosts();
+  const { allPosts, addPost, updatePost } = usePosts();
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
+
+  const editingPost = editId ? allPosts.find((p) => p.id === editId && p.userId === user?.id) : undefined;
+  const isEditing = !!editingPost;
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [addressText, setAddressText] = useState('');
-  const [pickupDate, setPickupDate] = useState('');
+  const [pickupDate, setPickupDate] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // "Adjust state during render" (React docs pattern) instead of an effect, since this
+  // only needs to run once, the moment `editingPost` first becomes available — an effect
+  // would call setState synchronously in its body, which react-compiler flags.
+  const [loadedEditId, setLoadedEditId] = useState<string | null>(null);
+  const prefilled = !editId || loadedEditId === editId;
+  if (editingPost && loadedEditId !== editingPost.id) {
+    setLoadedEditId(editingPost.id);
+    setPhotoUri(editingPost.photoUri);
+    setTitle(editingPost.title);
+    setDescription(editingPost.description);
+    setCategoryIds(editingPost.categoryIds);
+    setAddressText(editingPost.addressText);
+    setPickupDate(editingPost.pickupDate ? editingPost.pickupDate.slice(0, 10) : null);
+    setLocation({ lat: editingPost.lat, lng: editingPost.lng });
+  }
+
+  // Auto-geocode the typed address (Nominatim, free/no key — docs/normas.md) so a pin
+  // drops without the user having to tap the map. Manually tapping the map still wins,
+  // since that just calls setLocation directly and doesn't touch addressText. All setState
+  // calls happen inside the timeout callback, not synchronously in the effect body, so
+  // there's nothing to clean up but the pending timer itself.
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeFailed, setGeocodeFailed] = useState(false);
+  const addressTooShort = addressText.trim().length > 0 && addressText.trim().length < 5;
+  useEffect(() => {
+    if (editId && !prefilled) return; // don't re-geocode over the pre-filled pin on edit load
+    const query = addressText.trim();
+    if (query.length < 5) return;
+    const handle = setTimeout(async () => {
+      setIsGeocoding(true);
+      setGeocodeFailed(false);
+      try {
+        const result = await geocodeAddress(query, i18n.language);
+        if (result) {
+          setLocation({ lat: result.lat, lng: result.lng });
+          setGeocodeFailed(false);
+        } else {
+          setGeocodeFailed(true);
+        }
+      } catch {
+        setGeocodeFailed(true);
+      } finally {
+        setIsGeocoding(false);
+      }
+    }, GEOCODE_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [addressText, i18n.language, editId, prefilled]);
 
   const toggleCategory = (id: string) => {
     setCategoryIds((prev) =>
@@ -66,6 +121,25 @@ export default function CreateScreen() {
 
   const submit = async () => {
     if (!canSubmit || !user || !location) return;
+
+    if (editingPost) {
+      await updatePost({
+        id: editingPost.id,
+        userId: user.id,
+        userName: user.name,
+        categoryIds,
+        title: title.trim(),
+        description: description.trim(),
+        addressText: addressText.trim(),
+        lat: location.lat,
+        lng: location.lng,
+        photoUri: photoUri!,
+        pickupDate,
+      });
+      router.replace(`/post/${editingPost.id}`);
+      return;
+    }
+
     const post = await addPost({
       userId: user.id,
       userName: user.name,
@@ -76,21 +150,14 @@ export default function CreateScreen() {
       lat: location.lat,
       lng: location.lng,
       photoUri: photoUri!,
-      pickupDate: pickupDate.trim() ? new Date(pickupDate.trim()).toISOString() : null,
+      pickupDate,
     });
-    setPhotoUri(null);
-    setTitle('');
-    setDescription('');
-    setCategoryIds([]);
-    setAddressText('');
-    setPickupDate('');
-    setLocation(null);
-    router.push(`/post/${post.id}`);
+    router.replace(`/post/${post.id}`);
   };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>{t('create.title')}</Text>
+      <Text style={styles.title}>{isEditing ? t('create.edit_title') : t('create.title')}</Text>
       <Text style={styles.subtitle}>{t('create.subtitle')}</Text>
 
       <Text style={styles.label}>{t('create.add_photo')}</Text>
@@ -155,7 +222,13 @@ export default function CreateScreen() {
         placeholderTextColor={colors.textMuted}
         maxLength={200}
       />
-      <Text style={styles.hint}>{t('create.map_hint')}</Text>
+      <Text style={styles.hint}>
+        {isGeocoding
+          ? t('create.geocoding')
+          : geocodeFailed && !addressTooShort
+            ? t('create.geocoding_failed')
+            : t('create.map_hint')}
+      </Text>
       <View style={{ marginBottom: spacing.md }}>
         <PostMap
           posts={[]}
@@ -175,12 +248,10 @@ export default function CreateScreen() {
       )}
 
       <Text style={styles.label}>{t('create.pickup_date')}</Text>
-      <TextInput
-        style={styles.input}
+      <DatePickerField
         value={pickupDate}
-        onChangeText={setPickupDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor={colors.textMuted}
+        onChange={setPickupDate}
+        placeholder={t('create.pickup_date_placeholder')}
       />
 
       <View style={styles.municipalBox}>
@@ -200,7 +271,9 @@ export default function CreateScreen() {
         disabled={!canSubmit}
         style={[styles.submit, !canSubmit && styles.submitDisabled]}
         onPress={submit}>
-        <Text style={styles.submitText}>{t('create.submit')} →</Text>
+        <Text style={styles.submitText}>
+          {isEditing ? t('create.update_submit') : t('create.submit')} →
+        </Text>
       </Pressable>
     </ScrollView>
   );

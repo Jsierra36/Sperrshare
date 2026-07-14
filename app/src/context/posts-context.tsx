@@ -21,11 +21,15 @@ type NewPostInput = {
   pickupDate: string | null;
 };
 
+type UpdatePostInput = NewPostInput & { id: string };
+
 type PostsContextValue = {
   posts: Post[];
   allPosts: Post[];
   isReady: boolean;
   addPost: (input: NewPostInput) => Promise<Post>;
+  updatePost: (input: UpdatePostInput) => Promise<void>;
+  deletePost: (id: string, requestingUserId: string) => Promise<void>;
   markCollected: (id: string, requestingUserId: string) => Promise<void>;
 };
 
@@ -84,6 +88,45 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     return newPost;
   };
 
+  const updatePost = async (input: UpdatePostInput) => {
+    // Same defensive validation as addPost, plus an ownership check mirroring the
+    // RLS policy a real backend would enforce ("only the owner can edit their post").
+    const title = input.title.trim().slice(0, 80);
+    const description = input.description.trim().slice(0, 1000);
+    const addressText = input.addressText.trim().slice(0, 200);
+    const categoryIds = [...new Set(input.categoryIds)].slice(0, 20);
+    if (!title) throw new Error(i18n.t('errors.title_required'));
+    if (!addressText) throw new Error(i18n.t('errors.address_required'));
+    if (categoryIds.length === 0) throw new Error(i18n.t('errors.category_required'));
+    if (!input.photoUri) throw new Error(i18n.t('errors.photo_required'));
+    if (Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) {
+      throw new Error(i18n.t('errors.invalid_coordinates'));
+    }
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === input.id && p.userId === input.userId
+          ? {
+              ...p,
+              title,
+              description,
+              addressText,
+              categoryIds,
+              lat: input.lat,
+              lng: input.lng,
+              photoUri: input.photoUri,
+              pickupDate: input.pickupDate,
+              expiresAt: computeExpiresAt(p.createdAt, input.pickupDate),
+            }
+          : p
+      )
+    );
+  };
+
+  const deletePost = async (id: string, requestingUserId: string) => {
+    setPosts((prev) => prev.filter((p) => !(p.id === id && p.userId === requestingUserId)));
+  };
+
   const markCollected = async (id: string, requestingUserId: string) => {
     // Ownership check here mirrors what a Supabase RLS policy will enforce server-side
     // once there's a real backend — "only the owner can mutate their own post".
@@ -95,8 +138,12 @@ export function PostsProvider({ children }: { children: ReactNode }) {
   };
 
   // Lazily expire posts based on expiresAt, computed on read (no cron needed for the demo).
+  // Date.now() is inherently impure — deliberately not memoized; worst case a post reads
+  // as active for one extra render, which is fine for a demo.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
   const withComputedStatus = posts.map((p) =>
-    p.status === 'active' && new Date(p.expiresAt).getTime() < Date.now()
+    p.status === 'active' && new Date(p.expiresAt).getTime() < now
       ? { ...p, status: 'expired' as const }
       : p
   );
@@ -104,7 +151,15 @@ export function PostsProvider({ children }: { children: ReactNode }) {
 
   return (
     <PostsContext.Provider
-      value={{ posts: visiblePosts, allPosts: withComputedStatus, isReady, addPost, markCollected }}>
+      value={{
+        posts: visiblePosts,
+        allPosts: withComputedStatus,
+        isReady,
+        addPost,
+        updatePost,
+        deletePost,
+        markCollected,
+      }}>
       {children}
     </PostsContext.Provider>
   );

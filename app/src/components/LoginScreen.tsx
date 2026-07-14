@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { useTheme } from '@/context/theme-context';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
+import Logo from './Logo';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -51,6 +52,9 @@ export default function LoginScreen() {
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.card}>
+        <View style={styles.logoWrap}>
+          <Logo size={56} />
+        </View>
         <Text style={styles.title}>{t('login.title')}</Text>
         <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
 
@@ -122,6 +126,7 @@ const createStyles = (colors: ColorPalette) =>
       borderColor: colors.border,
       ...shadow.card,
     },
+    logoWrap: { alignItems: 'center', marginBottom: spacing.md },
     title: {
       fontFamily: fonts.heading,
       fontSize: 24,

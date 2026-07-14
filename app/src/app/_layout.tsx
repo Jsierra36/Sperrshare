@@ -9,9 +9,10 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useState } from 'react';
 
 import LoginScreen from '@/components/LoginScreen';
+import SplashScreen from '@/components/SplashScreen';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { PostsProvider } from '@/context/posts-context';
 import { ThemeProvider, useTheme } from '@/context/theme-context';
@@ -22,11 +23,7 @@ function RootGate() {
   const { colors } = useTheme();
 
   if (!isReady) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   if (!user) {
@@ -56,6 +53,10 @@ function RootGate() {
   );
 }
 
+// Minimum time the splash animation stays up, so it's visible even when fonts/auth
+// state resolve instantly (e.g. warm cache) instead of flashing by unseen.
+const MIN_SPLASH_DURATION_MS = 700;
+
 function AppShell() {
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_700Bold,
@@ -64,14 +65,15 @@ function AppShell() {
     BeVietnamPro_500Medium,
     BeVietnamPro_600SemiBold,
   });
-  const { colors } = useTheme();
+  const [minDurationElapsed, setMinDurationElapsed] = useState(false);
 
-  if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
+  useEffect(() => {
+    const id = setTimeout(() => setMinDurationElapsed(true), MIN_SPLASH_DURATION_MS);
+    return () => clearTimeout(id);
+  }, []);
+
+  if (!fontsLoaded || !minDurationElapsed) {
+    return <SplashScreen />;
   }
 
   return (

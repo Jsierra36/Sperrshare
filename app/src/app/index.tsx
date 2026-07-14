@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconPlus, IconUser } from '@/components/icons';
+import Logo from '@/components/Logo';
 import PostMap from '@/components/PostMap';
 import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
@@ -27,6 +28,7 @@ export default function MapScreen() {
       />
 
       <View pointerEvents="none" style={styles.header}>
+        <Logo size={22} />
         <Text style={styles.headerTitle}>Sperrshare</Text>
       </View>
 

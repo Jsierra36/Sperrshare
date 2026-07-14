@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { getCategories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
@@ -11,11 +12,13 @@ import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/color
 export default function PostDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { posts, markCollected } = usePosts();
+  const { posts, markCollected, deletePost } = usePosts();
   const { user } = useAuth();
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const router = useRouter();
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const post = posts.find((p) => p.id === id);
 
@@ -29,6 +32,13 @@ export default function PostDetailScreen() {
 
   const postCategories = getCategories(post.categoryIds);
   const isOwner = user?.id === post.userId;
+
+  const handleDelete = async () => {
+    if (!user) return;
+    await deletePost(post.id, user.id);
+    setConfirmDeleteOpen(false);
+    router.replace('/');
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -70,16 +80,50 @@ export default function PostDetailScreen() {
       </Text>
 
       {isOwner && (
-        <Pressable
-          style={styles.collectedButton}
-          onPress={async () => {
-            if (!user) return;
-            await markCollected(post.id, user.id);
-            router.back();
-          }}>
-          <Text style={styles.collectedButtonText}>{t('detail.mark_collected')}</Text>
-        </Pressable>
+        <View style={styles.ownerActions}>
+          <Pressable
+            style={styles.collectedButton}
+            onPress={async () => {
+              if (!user) return;
+              await markCollected(post.id, user.id);
+              router.back();
+            }}>
+            <Text style={styles.collectedButtonText}>{t('detail.mark_collected')}</Text>
+          </Pressable>
+
+          <View style={styles.secondaryRow}>
+            <Pressable
+              style={styles.editButton}
+              onPress={() => router.push({ pathname: '/create', params: { editId: post.id } })}>
+              <Text style={styles.editButtonText}>{t('detail.edit')}</Text>
+            </Pressable>
+            <Pressable style={styles.deleteButton} onPress={() => setConfirmDeleteOpen(true)}>
+              <Text style={styles.deleteButtonText}>{t('detail.delete')}</Text>
+            </Pressable>
+          </View>
+        </View>
       )}
+
+      <Modal
+        visible={confirmDeleteOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmDeleteOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setConfirmDeleteOpen(false)}>
+          <Pressable style={styles.confirmCard} onPress={() => {}}>
+            <Text style={styles.confirmTitle}>{t('detail.delete_confirm_title')}</Text>
+            <Text style={styles.confirmText}>{t('detail.delete_confirm_text')}</Text>
+            <View style={styles.secondaryRow}>
+              <Pressable style={styles.confirmCancel} onPress={() => setConfirmDeleteOpen(false)}>
+                <Text style={styles.confirmCancelText}>{t('common.cancel')}</Text>
+              </Pressable>
+              <Pressable style={styles.confirmDeleteButton} onPress={handleDelete}>
+                <Text style={styles.confirmDeleteText}>{t('detail.delete')}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -108,13 +152,63 @@ const createStyles = (colors: ColorPalette) =>
       marginBottom: spacing.xs,
     },
     description: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+    ownerActions: { marginTop: spacing.xl, gap: spacing.sm },
     collectedButton: {
       backgroundColor: colors.primary,
       borderRadius: radius.full,
       paddingVertical: spacing.md,
       alignItems: 'center',
-      marginTop: spacing.xl,
       ...shadow.button,
     },
     collectedButtonText: { fontFamily: fonts.headingSemibold, color: '#fff', fontSize: 16 },
+    secondaryRow: { flexDirection: 'row', gap: spacing.sm },
+    editButton: {
+      flex: 1,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.full,
+      paddingVertical: spacing.sm + 4,
+      alignItems: 'center',
+    },
+    editButtonText: { fontFamily: fonts.headingSemibold, color: colors.text, fontSize: 14 },
+    deleteButton: {
+      flex: 1,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.full,
+      paddingVertical: spacing.sm + 4,
+      alignItems: 'center',
+    },
+    deleteButtonText: { fontFamily: fonts.headingSemibold, color: colors.error, fontSize: 14 },
+    backdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: spacing.lg,
+    },
+    confirmCard: {
+      width: '100%',
+      maxWidth: 340,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      ...shadow.card,
+    },
+    confirmTitle: { fontFamily: fonts.heading, fontSize: 17, color: colors.text, marginBottom: spacing.xs },
+    confirmText: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginBottom: spacing.lg },
+    confirmCancel: {
+      flex: 1,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.full,
+      paddingVertical: spacing.sm + 4,
+      alignItems: 'center',
+    },
+    confirmCancelText: { fontFamily: fonts.headingSemibold, color: colors.text, fontSize: 14 },
+    confirmDeleteButton: {
+      flex: 1,
+      backgroundColor: colors.error,
+      borderRadius: radius.full,
+      paddingVertical: spacing.sm + 4,
+      alignItems: 'center',
+    },
+    confirmDeleteText: { fontFamily: fonts.headingSemibold, color: '#fff', fontSize: 14 },
   });
