@@ -30,7 +30,7 @@ export default function SupportScreen() {
       <Text style={styles.sectionTitle}>{t('support.contact_title')}</Text>
       <View style={styles.card}>
         <Text style={styles.answer}>{t('support.contact_text')}</Text>
-        <Text style={styles.contactEmail}>hello@sperrshare.app</Text>
+        <Text style={styles.contactEmail}>{t('support.contact_email')}</Text>
       </View>
     </ScrollView>
   );
@@ -39,7 +39,13 @@ export default function SupportScreen() {
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+    content: {
+      padding: spacing.md,
+      paddingBottom: spacing.xl * 2,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+    },
     title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginBottom: spacing.lg },
     sectionTitle: {
       fontFamily: fonts.headingSemibold,

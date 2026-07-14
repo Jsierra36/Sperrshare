@@ -59,7 +59,13 @@ export default function NotificationSettingsScreen() {
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+    content: {
+      padding: spacing.md,
+      paddingBottom: spacing.xl * 2,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+    },
     title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginBottom: spacing.lg },
     row: {
       flexDirection: 'row',

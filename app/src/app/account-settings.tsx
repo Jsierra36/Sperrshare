@@ -1,7 +1,16 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { IconCamera } from '@/components/icons';
 import { useAuth } from '@/context/auth-context';
@@ -20,15 +29,24 @@ export default function AccountSettingsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
 
   if (!user) return null;
 
   const initial = name.trim().charAt(0).toUpperCase() || '?';
 
   const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (!result.canceled && result.assets[0]) {
-      setAvatarUri(result.assets[0].uri);
+    setError(null);
+    setIsPickingPhoto(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('errors.photo_pick_failed'));
+    } finally {
+      setIsPickingPhoto(false);
     }
   };
 
@@ -40,7 +58,7 @@ export default function AccountSettingsScreen() {
       await updateProfile({ name, email, avatarUri });
       setSaved(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setError(e instanceof Error ? e.message : t('errors.generic'));
     } finally {
       setSaving(false);
     }
@@ -51,8 +69,16 @@ export default function AccountSettingsScreen() {
       <Text style={styles.title}>{t('account.title')}</Text>
 
       <View style={styles.avatarRow}>
-        <Pressable onPress={pickPhoto}>
-          {avatarUri ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('account.change_photo')}
+          onPress={pickPhoto}
+          disabled={isPickingPhoto}>
+          {isPickingPhoto ? (
+            <View style={styles.avatarPlaceholder}>
+              <ActivityIndicator color="#fff" />
+            </View>
+          ) : avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatarPlaceholder}>
@@ -63,7 +89,7 @@ export default function AccountSettingsScreen() {
             <IconCamera size={14} color="#fff" />
           </View>
         </Pressable>
-        <Pressable onPress={pickPhoto}>
+        <Pressable onPress={pickPhoto} disabled={isPickingPhoto}>
           <Text style={styles.changePhoto}>{t('account.change_photo')}</Text>
         </Pressable>
       </View>
@@ -101,7 +127,13 @@ export default function AccountSettingsScreen() {
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+    content: {
+      padding: spacing.md,
+      paddingBottom: spacing.xl * 2,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+    },
     title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginBottom: spacing.lg },
     avatarRow: { alignItems: 'center', marginBottom: spacing.lg },
     avatarImage: { width: 88, height: 88, borderRadius: 44, backgroundColor: colors.surfaceMuted },

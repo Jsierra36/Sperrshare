@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { getCategories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
@@ -19,6 +19,8 @@ export default function PostDetailScreen() {
   const router = useRouter();
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const post = posts.find((p) => p.id === id);
 
@@ -33,11 +35,31 @@ export default function PostDetailScreen() {
   const postCategories = getCategories(post.categoryIds);
   const isOwner = user?.id === post.userId;
 
+  const handleMarkCollected = async () => {
+    if (!user || isMutating) return;
+    setMutationError(null);
+    setIsMutating(true);
+    try {
+      await markCollected(post.id, user.id);
+      router.back();
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : t('errors.submit_failed'));
+      setIsMutating(false);
+    }
+  };
+
   const handleDelete = async () => {
-    if (!user) return;
-    await deletePost(post.id, user.id);
-    setConfirmDeleteOpen(false);
-    router.replace('/');
+    if (!user || isMutating) return;
+    setMutationError(null);
+    setIsMutating(true);
+    try {
+      await deletePost(post.id, user.id);
+      setConfirmDeleteOpen(false);
+      router.replace('/');
+    } catch (e) {
+      setMutationError(e instanceof Error ? e.message : t('errors.submit_failed'));
+      setIsMutating(false);
+    }
   };
 
   return (
@@ -81,23 +103,29 @@ export default function PostDetailScreen() {
 
       {isOwner && (
         <View style={styles.ownerActions}>
+          {mutationError && <Text style={styles.errorText}>{mutationError}</Text>}
           <Pressable
-            style={styles.collectedButton}
-            onPress={async () => {
-              if (!user) return;
-              await markCollected(post.id, user.id);
-              router.back();
-            }}>
-            <Text style={styles.collectedButtonText}>{t('detail.mark_collected')}</Text>
+            disabled={isMutating}
+            style={[styles.collectedButton, isMutating && styles.buttonDisabled]}
+            onPress={handleMarkCollected}>
+            {isMutating ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.collectedButtonText}>{t('detail.mark_collected')}</Text>
+            )}
           </Pressable>
 
           <View style={styles.secondaryRow}>
             <Pressable
+              disabled={isMutating}
               style={styles.editButton}
               onPress={() => router.push({ pathname: '/create', params: { editId: post.id } })}>
               <Text style={styles.editButtonText}>{t('detail.edit')}</Text>
             </Pressable>
-            <Pressable style={styles.deleteButton} onPress={() => setConfirmDeleteOpen(true)}>
+            <Pressable
+              disabled={isMutating}
+              style={styles.deleteButton}
+              onPress={() => setConfirmDeleteOpen(true)}>
               <Text style={styles.deleteButtonText}>{t('detail.delete')}</Text>
             </Pressable>
           </View>
@@ -117,8 +145,15 @@ export default function PostDetailScreen() {
               <Pressable style={styles.confirmCancel} onPress={() => setConfirmDeleteOpen(false)}>
                 <Text style={styles.confirmCancelText}>{t('common.cancel')}</Text>
               </Pressable>
-              <Pressable style={styles.confirmDeleteButton} onPress={handleDelete}>
-                <Text style={styles.confirmDeleteText}>{t('detail.delete')}</Text>
+              <Pressable
+                disabled={isMutating}
+                style={[styles.confirmDeleteButton, isMutating && styles.buttonDisabled]}
+                onPress={handleDelete}>
+                {isMutating ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.confirmDeleteText}>{t('detail.delete')}</Text>
+                )}
               </Pressable>
             </View>
           </Pressable>
@@ -131,7 +166,13 @@ export default function PostDetailScreen() {
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.md, paddingBottom: spacing.xl },
+    content: {
+      padding: spacing.md,
+      paddingBottom: spacing.xl,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+    },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
     image: { width: '100%', height: 240, borderRadius: radius.xl, backgroundColor: colors.surfaceMuted },
     badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
@@ -153,6 +194,8 @@ const createStyles = (colors: ColorPalette) =>
     },
     description: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, lineHeight: 20 },
     ownerActions: { marginTop: spacing.xl, gap: spacing.sm },
+    errorText: { fontFamily: fonts.body, fontSize: 12, color: colors.error, textAlign: 'center' },
+    buttonDisabled: { opacity: 0.6 },
     collectedButton: {
       backgroundColor: colors.primary,
       borderRadius: radius.full,

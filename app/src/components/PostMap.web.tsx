@@ -1,6 +1,7 @@
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 
 import type { Post } from '@/data/types';
@@ -23,11 +24,12 @@ function InvalidateSizeOnMount() {
 // Small floating "recenter" button, Dott-style — top-right, white circle, target icon.
 // (Bottom-right is reserved for the add-listing / profile action buttons.)
 function RecenterControl() {
+  const { t } = useTranslation();
   const map = useMap();
   return (
     <button
       type="button"
-      aria-label="Recenter map"
+      aria-label={t('map.recenter')}
       onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}
       style={{
         position: 'absolute',

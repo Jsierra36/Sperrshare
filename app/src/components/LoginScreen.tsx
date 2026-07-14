@@ -41,7 +41,7 @@ export default function LoginScreen() {
     try {
       await login(name, email, password);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setError(e instanceof Error ? e.message : t('errors.generic'));
     } finally {
       setSubmitting(false);
     }

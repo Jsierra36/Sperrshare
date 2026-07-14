@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBell, IconLifeBuoy, IconLogOut, IconSunMoon, IconUser } from '@/components/icons';
 import SettingsRow from '@/components/SettingsRow';
@@ -22,7 +22,7 @@ const STATUS_LABEL_KEY: Record<PostStatus, string> = {
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const { allPosts, markCollected } = usePosts();
+  const { allPosts, isReady, markCollected } = usePosts();
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const router = useRouter();
@@ -100,7 +100,9 @@ export default function ProfileScreen() {
 
       <Text style={styles.sectionTitle}>{t('profile.my_listings')}</Text>
 
-      {myPosts.length === 0 ? (
+      {!isReady ? (
+        <ActivityIndicator color={colors.primary} style={{ marginVertical: spacing.lg }} />
+      ) : myPosts.length === 0 ? (
         <Text style={styles.emptyText}>{t('profile.no_listings')}</Text>
       ) : (
         myPosts.map((post) => {
@@ -128,10 +130,14 @@ export default function ProfileScreen() {
               </View>
               {post.status === 'active' && (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('detail.mark_collected')}
                   style={styles.collectButton}
                   onPress={(e) => {
                     e.stopPropagation?.();
-                    markCollected(post.id, user.id);
+                    markCollected(post.id, user.id).catch((err: unknown) => {
+                      Alert.alert(err instanceof Error ? err.message : t('errors.submit_failed'));
+                    });
                   }}>
                   <Text style={styles.collectButtonText}>✓</Text>
                 </Pressable>
@@ -152,7 +158,13 @@ export default function ProfileScreen() {
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+    content: {
+      padding: spacing.md,
+      paddingBottom: spacing.xl * 2,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+    },
     header: { alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.lg },
     avatar: {
       width: 72,

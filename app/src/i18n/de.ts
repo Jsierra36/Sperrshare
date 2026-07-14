@@ -11,8 +11,10 @@ export default {
       cta: 'Weiter',
     },
     map: {
-      native_placeholder: 'Die Kartenansicht ist in der Web-Demo verfügbar.',
-      nearby_count: '{{count}} Fundstücke in der Nähe',
+      recenter: 'Karte zentrieren',
+      loading: 'Karte wird geladen…',
+      empty_title: 'Noch keine Fundstücke in der Nähe',
+      empty_subtitle: 'Sei die/der Erste und veröffentliche eine Anzeige.',
     },
     create: {
       title: 'Neue Anzeige',
@@ -114,13 +116,17 @@ export default {
       faq_3_a: 'Öffne "Meine Anzeigen" in deinem Profil und markiere den Eintrag als abgeholt.',
       contact_title: 'Kontakt',
       contact_text: 'Fragen oder Feedback? Schreib uns:',
+      contact_email: 'hello@sperrshare.app',
     },
     common: {
       cancel: 'Abbrechen',
       loading: 'Lädt…',
       back: 'Zurück',
+      previous_month: 'Vorheriger Monat',
+      next_month: 'Nächster Monat',
     },
     errors: {
+      generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
       name_required: 'Name ist erforderlich',
       invalid_email: 'Bitte gib eine gültige E-Mail-Adresse ein',
       password_too_short: 'Das Passwort muss mindestens {{count}} Zeichen lang sein',
@@ -129,6 +135,9 @@ export default {
       category_required: 'Mindestens eine Kategorie ist erforderlich',
       photo_required: 'Ein Foto ist erforderlich',
       invalid_coordinates: 'Ungültige Koordinaten',
+      photo_pick_failed: 'Foto konnte nicht ausgewählt werden. Bitte versuche es erneut.',
+      submit_failed: 'Anzeige konnte nicht gespeichert werden. Bitte versuche es erneut.',
+      link_open_failed: 'Der Link konnte nicht geöffnet werden.',
     },
   },
 };

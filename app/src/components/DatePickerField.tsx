@@ -84,6 +84,8 @@ export default function DatePickerField({ value, onChange, placeholder }: Props)
             <View style={styles.calHeader}>
               <Pressable
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.previous_month')}
                 style={styles.navButton}
                 onPress={() => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>
                 <Text style={styles.navButtonText}>‹</Text>
@@ -91,6 +93,8 @@ export default function DatePickerField({ value, onChange, placeholder }: Props)
               <Text style={styles.monthLabel}>{monthLabel}</Text>
               <Pressable
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.next_month')}
                 style={styles.navButton}
                 onPress={() => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>
                 <Text style={styles.navButtonText}>›</Text>

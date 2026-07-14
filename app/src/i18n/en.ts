@@ -11,8 +11,10 @@ export default {
       cta: 'Continue',
     },
     map: {
-      native_placeholder: 'Map view is available in the web demo.',
-      nearby_count: '{{count}} active finds nearby',
+      recenter: 'Recenter map',
+      loading: 'Loading map…',
+      empty_title: 'No finds nearby yet',
+      empty_subtitle: 'Be the first to publish a listing.',
     },
     create: {
       title: 'New listing',
@@ -114,13 +116,17 @@ export default {
       faq_3_a: 'Open "My listings" in your profile and mark the entry as collected.',
       contact_title: 'Contact',
       contact_text: 'Questions or feedback? Reach us at:',
+      contact_email: 'hello@sperrshare.app',
     },
     common: {
       cancel: 'Cancel',
       loading: 'Loading…',
       back: 'Back',
+      previous_month: 'Previous month',
+      next_month: 'Next month',
     },
     errors: {
+      generic: 'Something went wrong. Please try again.',
       name_required: 'Name is required',
       invalid_email: 'Enter a valid email address',
       password_too_short: 'Password must be at least {{count}} characters',
@@ -129,6 +135,9 @@ export default {
       category_required: 'At least one category is required',
       photo_required: 'A photo is required',
       invalid_coordinates: 'Invalid coordinates',
+      photo_pick_failed: 'Could not select a photo. Please try again.',
+      submit_failed: 'Could not save the listing. Please try again.',
+      link_open_failed: 'Could not open the link.',
     },
   },
 };

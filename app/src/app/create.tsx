@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Image,
   Linking,
   Pressable,
@@ -47,6 +48,7 @@ export default function CreateScreen() {
   const [addressText, setAddressText] = useState('');
   const [pickupDate, setPickupDate] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   // "Adjust state during render" (React docs pattern) instead of an effect, since this
   // only needs to run once, the moment `editingPost` first becomes available — an effect
@@ -109,22 +111,52 @@ export default function CreateScreen() {
     categoryIds.length > 0 &&
     !!location;
 
+  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+    setPhotoError(null);
+    setIsPickingPhoto(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : t('errors.photo_pick_failed'));
+    } finally {
+      setIsPickingPhoto(false);
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const submit = async () => {
-    if (!canSubmit || !user || !location) return;
+    if (!canSubmit || !user || !location || isSubmitting) return;
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      if (editingPost) {
+        await updatePost({
+          id: editingPost.id,
+          userId: user.id,
+          userName: user.name,
+          categoryIds,
+          title: title.trim(),
+          description: description.trim(),
+          addressText: addressText.trim(),
+          lat: location.lat,
+          lng: location.lng,
+          photoUri: photoUri!,
+          pickupDate,
+        });
+        router.replace(`/post/${editingPost.id}`);
+        return;
+      }
 
-    if (editingPost) {
-      await updatePost({
-        id: editingPost.id,
+      const post = await addPost({
         userId: user.id,
         userName: user.name,
         categoryIds,
@@ -136,23 +168,11 @@ export default function CreateScreen() {
         photoUri: photoUri!,
         pickupDate,
       });
-      router.replace(`/post/${editingPost.id}`);
-      return;
+      router.replace(`/post/${post.id}`);
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : t('errors.submit_failed'));
+      setIsSubmitting(false);
     }
-
-    const post = await addPost({
-      userId: user.id,
-      userName: user.name,
-      categoryIds,
-      title: title.trim(),
-      description: description.trim(),
-      addressText: addressText.trim(),
-      lat: location.lat,
-      lng: location.lng,
-      photoUri: photoUri!,
-      pickupDate,
-    });
-    router.replace(`/post/${post.id}`);
   };
 
   return (
@@ -161,8 +181,15 @@ export default function CreateScreen() {
       <Text style={styles.subtitle}>{t('create.subtitle')}</Text>
 
       <Text style={styles.label}>{t('create.add_photo')}</Text>
-      <Pressable style={styles.photoBox} onPress={pickPhoto}>
-        {photoUri ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('create.add_photo')}
+        style={styles.photoBox}
+        onPress={pickPhoto}
+        disabled={isPickingPhoto}>
+        {isPickingPhoto ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photoPreview} />
         ) : (
           <>
@@ -171,6 +198,7 @@ export default function CreateScreen() {
           </>
         )}
       </Pressable>
+      {photoError && <Text style={styles.errorText}>{photoError}</Text>}
 
       <Text style={styles.label}>{t('create.item_title')}</Text>
       <TextInput
@@ -257,9 +285,13 @@ export default function CreateScreen() {
       <View style={styles.municipalBox}>
         <Text style={styles.municipalTitle}>{t('create.municipal_pickup_title')}</Text>
         <Text style={styles.municipalText}>{t('create.municipal_pickup_text')}</Text>
-        <Pressable onPress={() => Linking.openURL(MUNICIPAL_PICKUP_URL)}>
+        <Pressable
+          onPress={() => {
+            Linking.openURL(MUNICIPAL_PICKUP_URL).catch(() => setLinkError(t('errors.link_open_failed')));
+          }}>
           <Text style={styles.municipalLink}>{t('create.municipal_pickup_link')} →</Text>
         </Pressable>
+        {linkError && <Text style={styles.errorText}>{linkError}</Text>}
       </View>
 
       <View style={styles.trustBox}>
@@ -267,13 +299,19 @@ export default function CreateScreen() {
         <Text style={styles.trustText}>{t('create.trust_note')}</Text>
       </View>
 
+      {submitError && <Text style={styles.errorText}>{submitError}</Text>}
+
       <Pressable
-        disabled={!canSubmit}
-        style={[styles.submit, !canSubmit && styles.submitDisabled]}
+        disabled={!canSubmit || isSubmitting}
+        style={[styles.submit, (!canSubmit || isSubmitting) && styles.submitDisabled]}
         onPress={submit}>
-        <Text style={styles.submitText}>
-          {isEditing ? t('create.update_submit') : t('create.submit')} →
-        </Text>
+        {isSubmitting ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.submitText}>
+            {isEditing ? t('create.update_submit') : t('create.submit')} →
+          </Text>
+        )}
       </Pressable>
     </ScrollView>
   );
@@ -282,7 +320,13 @@ export default function CreateScreen() {
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
-    content: { padding: spacing.md, paddingBottom: spacing.xl * 2 },
+    content: {
+      padding: spacing.md,
+      paddingBottom: spacing.xl * 2,
+      width: '100%',
+      maxWidth: 600,
+      alignSelf: 'center',
+    },
     title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginTop: spacing.sm },
     subtitle: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, marginBottom: spacing.lg },
     label: { fontFamily: fonts.headingSemibold, fontSize: 14, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.sm },
@@ -347,6 +391,14 @@ const createStyles = (colors: ColorPalette) =>
       marginBottom: spacing.lg,
     },
     trustText: { fontFamily: fonts.body, flex: 1, fontSize: 12, color: colors.primaryDark },
+    errorText: {
+      fontFamily: fonts.body,
+      fontSize: 12,
+      color: colors.error,
+      marginTop: -spacing.xs,
+      marginBottom: spacing.sm,
+      textAlign: 'center',
+    },
     submit: {
       backgroundColor: colors.primary,
       borderRadius: radius.full,
