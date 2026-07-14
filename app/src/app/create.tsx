@@ -54,7 +54,6 @@ export default function CreateScreen() {
   // only needs to run once, the moment `editingPost` first becomes available — an effect
   // would call setState synchronously in its body, which react-compiler flags.
   const [loadedEditId, setLoadedEditId] = useState<string | null>(null);
-  const prefilled = !editId || loadedEditId === editId;
   if (editingPost && loadedEditId !== editingPost.id) {
     setLoadedEditId(editingPost.id);
     setPhotoUri(editingPost.photoUri);
@@ -74,8 +73,14 @@ export default function CreateScreen() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeFailed, setGeocodeFailed] = useState(false);
   const addressTooShort = addressText.trim().length > 0 && addressText.trim().length < 5;
+  // Skip geocoding while the address still matches the listing being edited — its stored
+  // lat/lng is already correct for that exact string. Without this, saving an edit that
+  // only touched (say) the title would silently re-geocode the unchanged address and
+  // could move the pin to a different match entirely (confirmed: Nominatim resolved an
+  // unrelated "Neuer Graben" edit to a wrong city, overwriting a correct manual pin).
+  const skipGeocode = !!editingPost && addressText === editingPost.addressText;
   useEffect(() => {
-    if (editId && !prefilled) return; // don't re-geocode over the pre-filled pin on edit load
+    if (skipGeocode) return;
     const query = addressText.trim();
     if (query.length < 5) return;
     const handle = setTimeout(async () => {
@@ -96,7 +101,7 @@ export default function CreateScreen() {
       }
     }, GEOCODE_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [addressText, i18n.language, editId, prefilled]);
+  }, [addressText, i18n.language, skipGeocode]);
 
   const toggleCategory = (id: string) => {
     setCategoryIds((prev) =>
