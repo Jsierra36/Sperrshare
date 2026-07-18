@@ -1,38 +1,760 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>Sperrshare</title>
-    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
-    <style id="expo-reset">
-      /* These styles make the body full-height */
-      html,
-      body {
-        height: 100%;
-      }
-      /* These styles disable body scrolling if you are using <ScrollView> */
-      body {
-        overflow: hidden;
-      }
-      /* These styles make the root element full-height */
-      #root {
-        display: flex;
-        height: 100%;
-        flex: 1;
-      }
-    </style>
-  <link rel="icon" href="/Sperrshare/favicon.ico"/><link rel="preload" href="/Sperrshare/_expo/static/css/leaflet-df687fead8c4838a4e6b8bcb2f176a0e.css" as="style">
-<link rel="stylesheet" href="/Sperrshare/_expo/static/css/leaflet-df687fead8c4838a4e6b8bcb2f176a0e.css"></head>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sperrshare — Bevor es im Abfall landet, verdient es eine zweite Chance.</title>
+<meta name="description" content="Sperrshare verbindet Menschen, die Sperrmüll loswerden wollen, mit Menschen, die ihm kostenlos ein zweites Leben schenken — ganz in der Nachbarschaft." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%232D5A27'/%3E%3Cpath d='M17 10.5V8a1.5 1.5 0 0 0-1.5-1.5h-7A1.5 1.5 0 0 0 7 8v2.5' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M5.5 15.2A1.5 1.5 0 0 0 7 16.7h10a1.5 1.5 0 0 0 1.5-1.5v-3.4a1.4 1.4 0 0 0-2.8 0v1a.35.35 0 0 1-.35.35H7.65a.35.35 0 0 1-.35-.35v-1a1.4 1.4 0 0 0-2.8 0Z' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M6.5 16.7v1.3M17.5 16.7v1.3' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F9F9F8;
+    --surface: #FFFFFF;
+    --surface-muted: #EDEEED;
+    --border: #C2C9BB;
+    --text: #191C1C;
+    --text-muted: #42493E;
+    --primary: #2D5A27;
+    --primary-dark: #154212;
+    --secondary-container: #E1F0DE;
+    --accent: #FCD400;
+    --accent-orange: #FF8C00;
+    --radius-lg: 24px;
+    --radius-xl: 32px;
+    --radius-full: 999px;
+    --font-heading: 'Plus Jakarta Sans', sans-serif;
+    --font-body: 'Be Vietnam Pro', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  html, body { margin: 0; padding: 0; overflow-x: hidden; }
+  body {
+    background-color: var(--bg);
+    background-image: radial-gradient(rgba(45, 90, 39, 0.09) 1.4px, transparent 1.4px);
+    background-size: 22px 22px;
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  img, svg { max-width: 100%; display: block; }
+  a { color: inherit; }
+  section { position: relative; }
 
-  <body>
-    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
-    <noscript>
-      You need to enable JavaScript to run this app.
-    </noscript>
-    <!-- The root element for your Expo app. -->
-    <div id="root"></div>
-  <script src="/Sperrshare/_expo/static/js/web/entry-8762ec1abd37bf7e89c3599f4b1f4cb5.js" defer></script>
+  .wrap {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+  .wrap-narrow {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Decorative gradient blobs */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hero-art {
+    position: absolute;
+    top: -10%;
+    right: -8%;
+    width: 620px;
+    max-width: 55vw;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.9;
+  }
+
+  /* Header */
+  header.site {
+    padding: 20px 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(249, 249, 248, 0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(194, 201, 187, 0.4);
+  }
+  header.site .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 17px;
+  }
+  .brand .logo-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  nav.links {
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+  nav.links a.nav-link { color: var(--text-muted); text-decoration: none; }
+  nav.links a.nav-link:hover { color: var(--primary); }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--primary-dark);
+    box-shadow: 0px 6px 18px rgba(252, 212, 0, 0.35);
+  }
+  .btn-primary:hover { filter: brightness(0.97); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--primary);
+    border: 1.5px solid var(--border);
+  }
+  .btn-sm { font-size: 13.5px; padding: 9px 18px; }
+  .btn-md { font-size: 15px; padding: 13px 26px; }
+  .btn-lg { font-size: 16px; padding: 16px 32px; }
+
+  /* Hero */
+  .hero { padding: 64px 0 80px; }
+  .hero .wrap {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--secondary-container);
+    color: var(--primary-dark);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    margin-bottom: 22px;
+  }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
+  .hero h1 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: clamp(30px, 4vw, 44px);
+    line-height: 1.14;
+    margin: 0 0 18px;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 .accent { color: var(--accent-orange); }
+  .hero p.lead {
+    font-size: 16.5px;
+    color: var(--text-muted);
+    max-width: 460px;
+    margin: 0 0 30px;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+  .cta-note { font-size: 12.5px; color: var(--text-muted); margin: 14px 0 0; }
+
+  /* Phone mockup */
+  .phone-wrap { position: relative; z-index: 1; display: flex; justify-content: center; }
+  .phone-shadow {
+    width: 74%;
+    height: 34px;
+    margin: -18px auto 0;
+    background: radial-gradient(ellipse, rgba(21, 66, 18, 0.35) 0%, rgba(21, 66, 18, 0) 72%);
+    filter: blur(2px);
+  }
+  .phone {
+    position: relative;
+    width: 260px;
+    background: linear-gradient(155deg, #22282a, #0b0d0e);
+    border-radius: 40px;
+    padding: 12px;
+    box-shadow:
+      0px 30px 60px rgba(21, 66, 18, 0.28),
+      0px 8px 20px rgba(0,0,0,0.15),
+      inset 0px 1px 1px rgba(255,255,255,0.08);
+  }
+  .phone .screen {
+    position: relative;
+    background: #E8EFE4;
+    border-radius: 28px;
+    overflow: hidden;
+    aspect-ratio: 9 / 17.5;
+  }
+  .phone .screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 22%, rgba(255,255,255,0) 78%, rgba(255,255,255,0.12) 100%);
+    pointer-events: none;
+  }
+  .phone .status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px 0;
+    font-size: 11px;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: #223026;
+  }
+  /* Real map tiles — CARTO Voyager's label-free variant (voyager_nolabels), so the mockup
+     shows streets/parks/water for texture without any place or street names being
+     readable. This is a landing-page-only choice; the real app (PostMap.web.tsx) keeps
+     labels since you actually need them to navigate a real map. Stacked top/bottom via
+     two background-images instead of an abstract CSS approximation. */
+  .map-tile {
+    position: absolute;
+    inset: 0;
+    background-image: url('assets/map-tile-top.png'), url('assets/map-tile-bottom.png');
+    background-position: top center, bottom center;
+    background-size: 160% auto, 160% auto;
+    background-repeat: no-repeat, no-repeat;
+    background-color: #DCE8D6;
+  }
+  .map-attribution {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 10px;
+  }
+  .pin {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 3px 8px rgba(0,0,0,0.25);
+  }
+  .pin.pin-primary { background: var(--primary); }
+  .pin.cluster {
+    background: var(--primary);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: #fff;
+    font-size: 12px;
+    width: 34px;
+    height: 34px;
+  }
+  .fab-add {
+    position: absolute;
+    right: 14px;
+    bottom: 88px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--accent-orange);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.25);
+  }
+  .listing-card {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 12px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    box-shadow: 0px 8px 20px rgba(0,0,0,0.18);
+  }
+  .listing-card .thumb {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #C79A6B, #8A6842);
+    flex-shrink: 0;
+  }
+  .listing-card .title { font-family: var(--font-heading); font-weight: 700; font-size: 12px; color: var(--text); }
+  .listing-card .meta { font-size: 10.5px; color: var(--text-muted); margin: 2px 0 5px; }
+  .listing-card .pill {
+    display: inline-block;
+    background: var(--secondary-container);
+    color: var(--primary-dark);
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+  }
+
+  /* How it works */
+  .how { padding: 20px 0 80px; }
+  .section-head { text-align: center; max-width: 520px; margin: 0 auto 40px; }
+  .section-head h2 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: clamp(22px, 3vw, 28px);
+    margin: 0 0 10px;
+  }
+  .section-head p { color: var(--text-muted); font-size: 15px; margin: 0; }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .step {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 26px 20px;
+    box-shadow: 0px 4px 20px rgba(21, 66, 18, 0.05);
+  }
+  .step .num {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 12px;
+    color: var(--primary);
+    background: var(--secondary-container);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .step h3 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 15.5px;
+    margin: 0 0 8px;
+  }
+  .step p { font-size: 13.5px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+
+  /* Live map feature */
+  .live {
+    padding: 0 0 80px;
+  }
+  .live .panel {
+    background: linear-gradient(155deg, #EAF3E7 0%, #F9F9F8 55%);
+    border-radius: var(--radius-xl);
+    padding: 56px 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .panel-art {
+    position: absolute;
+    top: 50%;
+    left: -14%;
+    width: 400px;
+    max-width: 50vw;
+    transform: translateY(-50%);
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.8;
+  }
+  .live .copy, .live .phone { position: relative; z-index: 1; }
+  .live .copy h2 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: clamp(22px, 3vw, 30px);
+    margin: 0 0 14px;
+  }
+  .live .copy p { color: var(--text-muted); font-size: 15px; max-width: 400px; margin: 0 0 22px; }
+  .live .bullets { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .live .bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--text);
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+  .live .bullets .check {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .live .phone { width: 220px; margin: 0 auto; }
+
+  /* Feature cards */
+  .features { padding: 0 0 80px; }
+  .cards {
+    display: grid;
+    grid-template-columns: 1.2fr 1.2fr 1fr;
+    gap: 18px;
+  }
+  .card {
+    border-radius: var(--radius-lg);
+    padding: 26px 22px;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .card .icon-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    margin-bottom: 30px;
+  }
+  .card h3 { font-family: var(--font-heading); font-weight: 700; font-size: 16px; margin: 0 0 8px; }
+  .card p { font-size: 13px; margin: 0; line-height: 1.5; }
+  .card-dark {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255,255,255,0.16) 0%, transparent 55%),
+      linear-gradient(155deg, #35722e, var(--primary-dark));
+    color: #fff;
+    box-shadow: 0px 16px 32px rgba(21, 66, 18, 0.3);
+  }
+  .card-dark .icon-badge { background: rgba(255,255,255,0.18); }
+  .card-dark p { color: rgba(255,255,255,0.78); }
+  .card-orange {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(255,255,255,0.22) 0%, transparent 55%),
+      linear-gradient(155deg, #FFA733, var(--accent-orange));
+    color: #fff;
+    box-shadow: 0px 16px 32px rgba(255, 140, 0, 0.28);
+  }
+  .card-orange .icon-badge { background: rgba(255,255,255,0.22); }
+  .card-orange p { color: rgba(255,255,255,0.85); }
+  .card-light { background: var(--surface); box-shadow: 0px 4px 20px rgba(21, 66, 18, 0.05); }
+  .card-light .icon-badge { background: var(--secondary-container); }
+  .card-light p { color: var(--text-muted); }
+
+  /* Closing CTA band */
+  .closing {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+    padding: 60px 0;
+    text-align: center;
+    border-radius: var(--radius-xl);
+    margin: 0 24px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .closing .wrap-narrow { position: relative; z-index: 1; }
+  .closing h2 {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    color: #fff;
+    font-size: clamp(22px, 3vw, 30px);
+    margin: 0 0 12px;
+  }
+  .closing p { color: rgba(255,255,255,0.8); font-size: 14.5px; margin: 0 0 28px; }
+  .store-badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+  }
+  .store-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.9);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 12.5px;
+    padding: 9px 16px;
+    border-radius: var(--radius-full);
+  }
+
+  footer.site {
+    padding: 32px 0 40px;
+    text-align: center;
+  }
+  footer.site .brand { justify-content: center; margin-bottom: 10px; }
+  footer.site .foot-meta {
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  footer.site .foot-meta a { text-decoration: underline; }
+
+  @media (max-width: 860px) {
+    .hero .wrap { grid-template-columns: 1fr; text-align: center; }
+    .hero p.lead { margin-left: auto; margin-right: auto; }
+    .hero-ctas { justify-content: center; }
+    .eyebrow { margin-left: auto; margin-right: auto; }
+    .steps { grid-template-columns: 1fr; }
+    .live .panel { grid-template-columns: 1fr; text-align: center; padding: 40px 24px; }
+    .live .bullets { justify-items: center; }
+    .live .bullets li { text-align: left; }
+    .cards { grid-template-columns: 1fr; }
+    nav.links .nav-link { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="brand">
+      <span class="logo-dot">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" />
+          <path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" />
+          <path d="M4 18v2" /><path d="M20 18v2" />
+        </svg>
+      </span>
+      Sperrshare
+    </div>
+    <nav class="links">
+      <a class="nav-link" href="#so-funktionierts">So funktioniert's</a>
+      <a class="nav-link" href="#live-karte">Live-Karte</a>
+      <a class="btn btn-primary btn-sm" href="./demo/">Demo testen</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <svg class="hero-art" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <radialGradient id="heroGlow" cx="50%" cy="45%" r="60%">
+        <stop offset="0%" stop-color="#E1F0DE" />
+        <stop offset="100%" stop-color="#E1F0DE" stop-opacity="0" />
+      </radialGradient>
+    </defs>
+    <circle cx="220" cy="180" r="200" fill="url(#heroGlow)" />
+    <g stroke-width="2.4" fill="none" stroke-linejoin="round">
+      <path d="M220,40 C300,40 360,90 362,170 C364,250 306,320 226,332 C150,344 76,300 62,224 C48,148 96,60 172,44 C188,41 204,40 220,40 Z" stroke="#2D5A27" opacity="0.5" />
+      <path transform="translate(210,190) scale(0.82) translate(-210,-190)" d="M220,40 C300,40 360,90 362,170 C364,250 306,320 226,332 C150,344 76,300 62,224 C48,148 96,60 172,44 C188,41 204,40 220,40 Z" stroke="#4CAF50" opacity="0.45" />
+      <path transform="translate(210,190) scale(0.64) translate(-210,-190)" d="M220,40 C300,40 360,90 362,170 C364,250 306,320 226,332 C150,344 76,300 62,224 C48,148 96,60 172,44 C188,41 204,40 220,40 Z" stroke="#FCD400" opacity="0.55" />
+      <path transform="translate(210,190) scale(0.46) translate(-210,-190)" d="M220,40 C300,40 360,90 362,170 C364,250 306,320 226,332 C150,344 76,300 62,224 C48,148 96,60 172,44 C188,41 204,40 220,40 Z" stroke="#FF8C00" opacity="0.5" />
+      <path transform="translate(210,190) scale(0.28) translate(-210,-190)" d="M220,40 C300,40 360,90 362,170 C364,250 306,320 226,332 C150,344 76,300 62,224 C48,148 96,60 172,44 C188,41 204,40 220,40 Z" stroke="#2D5A27" opacity="0.4" />
+    </g>
+  </svg>
+  <div class="blob" style="width:220px;height:220px;bottom:-40px;left:-40px;background:radial-gradient(circle,#FFF3C4 0%,transparent 70%);"></div>
+  <div class="wrap">
+    <div class="hero-copy">
+      <span class="eyebrow"><span class="dot"></span>Web-Demo verfügbar</span>
+      <h1>Bevor es im Abfall landet,<br />verdient es <span class="accent">eine zweite Chance.</span></h1>
+      <p class="lead">Sperrshare verbindet Menschen, die Sperrmüll loswerden wollen, mit Menschen, die ihm kostenlos ein zweites Leben schenken — ganz in der Nachbarschaft.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary btn-lg" href="./demo/">Demo testen →</a>
+        <a class="btn btn-ghost btn-lg" href="#so-funktionierts">So funktioniert's</a>
+      </div>
+      <p class="cta-note">Zum Ausprobieren reichen Fantasie-Angaben — echte Daten sind nicht nötig.</p>
+    </div>
+    <div class="phone-wrap">
+      <div>
+        <div class="phone">
+          <div class="screen">
+            <div class="map-tile"></div>
+            <div class="status-bar"><span>9:41</span><span>•••</span></div>
+            <div class="pin pin-primary" style="top:30%;left:20%;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" /></svg>
+            </div>
+            <div class="pin cluster" style="top:24%;left:64%;">3</div>
+            <div class="pin pin-primary" style="top:52%;left:46%;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" /></svg>
+            </div>
+            <div class="fab-add">+</div>
+            <div class="listing-card">
+              <div class="thumb"></div>
+              <div>
+                <div class="title">Kommode, gut erhalten</div>
+                <div class="meta">180 m entfernt · Möbel</div>
+                <span class="pill">Kostenlos abholen</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-shadow"></div>
+        <div class="map-attribution">© OpenStreetMap contributors © CARTO</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="so-funktionierts">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>So funktioniert's</h2>
+      <p>Drei Schritte zwischen "wird nicht mehr gebraucht" und "hat ein neues Zuhause".</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Kostenlos registrieren</h3>
+        <p>Ein kostenloses Konto in wenigen Sekunden — das ist alles, was du brauchst.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Sperrmüll in deiner Nähe entdecken</h3>
+        <p>Sieh auf der Live-Karte, was gerade in deiner Nachbarschaft steht, mit genauer Adresse.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Abholen, wann's dir passt</h3>
+        <p>Kein Chat, keine Absprache nötig — einfach hingehen und mitnehmen, solange es verfügbar ist.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="live" id="live-karte">
+  <div class="wrap">
+    <div class="panel">
+      <svg class="panel-art" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <radialGradient id="panelGlow" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" stop-color="#FCD400" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="#FCD400" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="180" cy="200" r="190" fill="url(#panelGlow)" />
+        <g stroke-width="2.4" fill="none" stroke-linejoin="round">
+          <path d="M180,60 C260,60 320,110 322,190 C324,270 266,340 186,352 C110,364 36,320 22,244 C8,168 56,80 132,64 C148,61 164,60 180,60 Z" stroke="#2D5A27" opacity="0.35" />
+          <path transform="translate(170,210) scale(0.78) translate(-170,-210)" d="M180,60 C260,60 320,110 322,190 C324,270 266,340 186,352 C110,364 36,320 22,244 C8,168 56,80 132,64 C148,61 164,60 180,60 Z" stroke="#4CAF50" opacity="0.32" />
+          <path transform="translate(170,210) scale(0.56) translate(-170,-210)" d="M180,60 C260,60 320,110 322,190 C324,270 266,340 186,352 C110,364 36,320 22,244 C8,168 56,80 132,64 C148,61 164,60 180,60 Z" stroke="#FF8C00" opacity="0.4" />
+        </g>
+      </svg>
+      <div class="blob" style="width:260px;height:260px;top:-60px;right:10%;background:radial-gradient(circle,#FCD400 0%,transparent 70%);opacity:0.25;"></div>
+      <div class="copy">
+        <h2>Deine Nachbarschaft, in Echtzeit.</h2>
+        <p>Jeder Pin ist ein echtes Fundstück in der Nähe. Liegen mehrere dicht beieinander, gruppiert die Karte sie zu einem Hotspot — genau wie du es aus anderen Karten-Apps kennst.</p>
+        <ul class="bullets">
+          <li><span class="check">✓</span> Kostenloses Konto, in Sekunden erstellt</li>
+          <li><span class="check">✓</span> Genaue Adresse für jedes Fundstück</li>
+          <li><span class="check">✓</span> Selbst etwas loswerden? Foto + Standort reicht</li>
+        </ul>
+      </div>
+      <div>
+        <div class="phone">
+          <div class="screen">
+            <div class="map-tile"></div>
+            <div class="status-bar"><span>9:41</span><span>•••</span></div>
+            <div class="pin pin-primary" style="top:22%;left:52%;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" /></svg>
+            </div>
+            <div class="pin cluster" style="top:44%;left:24%;">2</div>
+            <div class="pin pin-primary" style="top:64%;left:68%;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" /><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" /></svg>
+            </div>
+          </div>
+        </div>
+        <div class="phone-shadow"></div>
+        <div class="map-attribution">© OpenStreetMap contributors © CARTO</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features">
+  <div class="wrap">
+    <div class="cards">
+      <div class="card card-dark">
+        <div class="icon-badge">🔍</div>
+        <div>
+          <h3>Entdecken</h3>
+          <p>Alle Fundstücke deiner Umgebung auf einer Karte, live und übersichtlich.</p>
+        </div>
+      </div>
+      <div class="card card-orange">
+        <div class="icon-badge">📷</div>
+        <div>
+          <h3>Teilen</h3>
+          <p>Ein Foto, ein Standort — in unter einer Minute veröffentlicht.</p>
+        </div>
+      </div>
+      <div class="card card-light">
+        <div class="icon-badge">♻️</div>
+        <div>
+          <h3>Wirkung</h3>
+          <p>Jedes abgeholte Teil ist eines weniger auf dem Wertstoffhof.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="closing">
+  <div class="wrap-narrow">
+    <h2>Neugierig, wie es aussieht?</h2>
+    <p>Die Web-Demo läuft direkt im Browser — keine Installation nötig, und zum Ausprobieren reichen Fantasie-Angaben.</p>
+    <a class="btn btn-primary btn-lg" href="./demo/">Demo testen →</a>
+    <div class="store-badges">
+      <span class="store-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M16.365 1.43c0 1.14-.415 2.07-1.246 2.79-.831.72-1.83 1.14-2.998 1.05-.09-1.11.33-2.16 1.17-2.88.84-.72 1.98-1.11 3.074-.96zM20.14 17.44c-.42.99-.93 1.92-1.53 2.79-.81 1.17-1.65 2.34-2.97 2.37-1.29.03-1.71-.75-3.18-.75-1.47 0-1.95.72-3.18.78-1.26.06-2.22-1.26-3.03-2.43-1.65-2.4-2.94-6.75-1.23-9.72.84-1.47 2.37-2.4 4.02-2.43 1.23-.03 2.4.81 3.18.81.78 0 2.16-.99 3.66-.84.63.03 2.4.27 3.54 1.98-.09.06-2.13 1.23-2.1 3.72.03 2.94 2.61 3.93 2.64 3.96l-.01.03z"/></svg>
+        <span>Bald im App Store</span>
+      </span>
+      <span class="store-badge">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 2.6v18.8c0 .5.55.85 1 .6l16-9.4c.45-.25.45-.95 0-1.2L5 1.99c-.45-.25-1 .1-1 .6z" fill="#fff"/></svg>
+        <span>Bald bei Google Play</span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="brand">
+      <span class="logo-dot">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" />
+          <path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" />
+          <path d="M4 18v2" /><path d="M20 18v2" />
+        </svg>
+      </span>
+      Sperrshare
+    </div>
+    <div class="foot-meta">
+      © 2026 Sperrshare · Kontakt: <a href="mailto:Joan.garciasierra@gmail.com">Joan.garciasierra@gmail.com</a>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>
