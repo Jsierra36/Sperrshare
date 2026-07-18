@@ -7,6 +7,7 @@ import Logo from '@/components/Logo';
 import PostMap from '@/components/PostMap';
 import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
+import { useUserLocation } from '@/hooks/useUserLocation';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
 
 // Map-first home screen, modeled on Dott's minimal map UI: the map fills the whole
@@ -17,6 +18,7 @@ export default function MapScreen() {
   const { t } = useTranslation();
   const { posts, isReady } = usePosts();
   const { colors } = useTheme();
+  const { location: userLocation } = useUserLocation();
   const styles = createStyles(colors);
   const router = useRouter();
 
@@ -25,22 +27,23 @@ export default function MapScreen() {
       <PostMap
         posts={posts}
         onSelectPost={(p) => router.push(`/post/${p.id}`)}
+        initialCenter={userLocation}
         height="100%"
         rounded={false}
       />
 
-      <View pointerEvents="none" style={styles.header}>
+      <View style={styles.header}>
         <Logo size={22} />
         <Text style={styles.headerTitle}>{t('app_name')}</Text>
       </View>
 
       {!isReady ? (
-        <View pointerEvents="none" style={styles.statusPill}>
+        <View style={styles.statusPill}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={styles.statusPillText}>{t('map.loading')}</Text>
         </View>
       ) : posts.length === 0 ? (
-        <View pointerEvents="none" style={styles.statusPillColumn}>
+        <View style={styles.statusPillColumn}>
           <Text style={styles.statusPillText}>{t('map.empty_title')}</Text>
           <Text style={styles.statusPillSubtext}>{t('map.empty_subtitle')}</Text>
         </View>
@@ -83,6 +86,7 @@ const createStyles = (colors: ColorPalette) =>
       borderRadius: radius.full,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+      pointerEvents: 'none',
       ...shadow.card,
     },
     headerTitle: { fontFamily: fonts.heading, fontSize: 15, color: '#191C1C' },
@@ -98,6 +102,7 @@ const createStyles = (colors: ColorPalette) =>
       borderRadius: radius.full,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+      pointerEvents: 'none',
       ...shadow.card,
     },
     statusPillText: { fontFamily: fonts.label, fontSize: 12, color: '#191C1C' },
@@ -111,6 +116,7 @@ const createStyles = (colors: ColorPalette) =>
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
+      pointerEvents: 'none',
       ...shadow.card,
     },
     statusPillSubtext: { fontFamily: fonts.body, fontSize: 11, color: '#42493E', marginTop: 2 },

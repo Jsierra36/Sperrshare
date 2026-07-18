@@ -11,7 +11,13 @@ export async function geocodeAddress(query: string, language: string): Promise<G
 
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('format', 'json');
-  url.searchParams.set('q', trimmed);
+  // Append the city explicitly — `viewbox` below is only a soft ranking bias (bounded=0),
+  // so a generic street name like "Neuer Graben" or "Wittekindstraße" (both real streets
+  // in other German cities too) can still outrank the actual Osnabrück match and silently
+  // resolve to a pin in the wrong city. Confirmed against the live API while fixing the
+  // seed listings (docs/roadmap.md) — this app is Osnabrück-only for now (docs/vision.md).
+  const qualified = /osnabrück|osnabrueck/i.test(trimmed) ? trimmed : `${trimmed}, Osnabrück`;
+  url.searchParams.set('q', qualified);
   url.searchParams.set('limit', '1');
   url.searchParams.set('countrycodes', 'de');
   url.searchParams.set('viewbox', OSNABRUECK_VIEWBOX);

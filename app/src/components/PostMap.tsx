@@ -1,7 +1,9 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, {
+import ClusteredMapView from 'react-native-map-clustering';
+import type RNMapView from 'react-native-maps';
+import {
   Callout,
   Marker,
   PROVIDER_DEFAULT,
@@ -13,6 +15,7 @@ import { Path, Svg } from 'react-native-svg';
 
 import type { Post } from '@/data/types';
 import { useTheme } from '@/context/theme-context';
+import { radiusToDeltas } from '@/lib/geo';
 import { fonts, radius, shadow, spacing } from '@/theme/colors';
 
 type Props = {
@@ -20,6 +23,9 @@ type Props = {
   onSelectPost?: (post: Post) => void;
   onMapClick?: (lat: number, lng: number) => void;
   pickedLocation?: { lat: number; lng: number } | null;
+  // User's real position (see useUserLocation) — when available, the map recenters to a
+  // ~2km-radius view around it once, on first arrival, instead of the Osnabrück default.
+  initialCenter?: { lat: number; lng: number } | null;
   height?: number | string;
   rounded?: boolean;
 };
@@ -30,7 +36,18 @@ const DEFAULT_REGION: Region = {
   latitudeDelta: 0.06,
   longitudeDelta: 0.06,
 };
+const USER_RADIUS_METERS = 2000;
 const PIN_SIZE = 34; // matches the web pin (PostMap.web.tsx)
+
+function regionAround(center: { lat: number; lng: number }, radiusMeters: number): Region {
+  const { latDelta, lngDelta } = radiusToDeltas(center.lat, radiusMeters);
+  return {
+    latitude: center.lat,
+    longitude: center.lng,
+    latitudeDelta: latDelta * 2,
+    longitudeDelta: lngDelta * 2,
+  };
+}
 
 // CARTO's free basemaps (same styles as the web build) also serve from a single
 // non-sharded host without the `{s}`/`{r}` placeholders react-native-maps' UrlTile
@@ -68,6 +85,17 @@ function PostPin({ color }: { color: string }) {
   );
 }
 
+// Cluster badge shown instead of individual pins when posts are close together at the
+// current zoom level (Airbnb-style hotspot grouping) — same pin shape as PostPin, slightly
+// bigger, with the count instead of the sofa glyph. Mirrors clusterIcon() in PostMap.web.tsx.
+function ClusterPin({ count, color }: { count: number; color: string }) {
+  return (
+    <View style={[pinStyles.pin, pinStyles.clusterPin, { backgroundColor: color }]}>
+      <Text style={pinStyles.clusterText}>{count}</Text>
+    </View>
+  );
+}
+
 // Orange location-pin marker used while picking a spot in create/edit — mirrors
 // pickedLocationIcon() in PostMap.web.tsx.
 function PickedPin({ color }: { color: string }) {
@@ -77,6 +105,8 @@ function PickedPin({ color }: { color: string }) {
     </View>
   );
 }
+
+const CLUSTER_PIN_SIZE = 40; // matches the web cluster icon (PostMap.web.tsx)
 
 const pinStyles = StyleSheet.create({
   pin: {
@@ -95,6 +125,12 @@ const pinStyles = StyleSheet.create({
       },
     }),
   },
+  clusterPin: {
+    width: CLUSTER_PIN_SIZE,
+    height: CLUSTER_PIN_SIZE,
+    borderRadius: CLUSTER_PIN_SIZE / 2,
+  },
+  clusterText: { fontFamily: fonts.headingSemibold, color: '#fff', fontSize: 14 },
 });
 
 // Small floating "recenter" button, same visual language as the web RecenterControl
@@ -116,13 +152,14 @@ export default function PostMap({
   onSelectPost,
   onMapClick,
   pickedLocation,
+  initialCenter,
   height = 320,
   rounded = true,
 }: Props) {
   const { t } = useTranslation();
   const { mode, colors } = useTheme();
   const isDark = mode === 'dark';
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<RNMapView>(null);
 
   const handleMapPress = (event: MapPressEvent) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
@@ -130,8 +167,21 @@ export default function PostMap({
   };
 
   const recenter = () => {
-    mapRef.current?.animateToRegion(DEFAULT_REGION, 400);
+    mapRef.current?.animateToRegion(
+      initialCenter ? regionAround(initialCenter, USER_RADIUS_METERS) : DEFAULT_REGION,
+      400,
+    );
   };
+
+  // Recenters once, the moment the user's real location first resolves (it arrives
+  // asynchronously after permission + a GPS fix — see useUserLocation) — not on every
+  // render, so it doesn't fight the user's own panning/zooming afterwards.
+  const hasCenteredOnUserRef = useRef(false);
+  useEffect(() => {
+    if (!initialCenter || hasCenteredOnUserRef.current) return;
+    hasCenteredOnUserRef.current = true;
+    mapRef.current?.animateToRegion(regionAround(initialCenter, USER_RADIUS_METERS), 500);
+  }, [initialCenter]);
 
   return (
     <View
@@ -139,7 +189,7 @@ export default function PostMap({
         styles.container,
         { height: height as number, borderRadius: rounded ? radius.lg : 0 },
       ]}>
-      <MapView
+      <ClusteredMapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_DEFAULT}
@@ -150,7 +200,26 @@ export default function PostMap({
         // without ever touching a paid Google Maps key (docs/normas.md).
         mapType={Platform.OS === 'android' ? 'none' : 'standard'}
         toolbarEnabled={false}
-        showsCompass={false}>
+        showsCompass={false}
+        // Hotspot grouping (Airbnb-style +N badges) for nearby pins — only the post
+        // markers below are clustered; the single pickedLocation pin used while
+        // creating/editing a listing is rendered outside this and never clusters.
+        clusterColor={colors.primary}
+        clusterTextColor="#fff"
+        clusterFontFamily={fonts.headingSemibold}
+        renderCluster={(cluster) => {
+          const { id, geometry, onPress, properties } = cluster;
+          return (
+            <Marker
+              key={`cluster-${id}`}
+              coordinate={{ latitude: geometry.coordinates[1], longitude: geometry.coordinates[0] }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              onPress={onPress}
+              tracksViewChanges={false}>
+              <ClusterPin count={properties.point_count} color={colors.primary} />
+            </Marker>
+          );
+        }}>
         <UrlTile
           urlTemplate={isDark ? TILE_URL_DARK : TILE_URL_LIGHT}
           maximumZ={19}
@@ -188,7 +257,7 @@ export default function PostMap({
             <PickedPin color={colors.accentOrange} />
           </Marker>
         )}
-      </MapView>
+      </ClusteredMapView>
 
       <Text style={styles.attribution}>© OpenStreetMap contributors © CARTO</Text>
 

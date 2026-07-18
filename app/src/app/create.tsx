@@ -265,7 +265,10 @@ export default function CreateScreen() {
       <View style={{ marginBottom: spacing.md }}>
         <PostMap
           posts={[]}
-          onMapClick={(lat, lng) => setLocation({ lat, lng })}
+          // The pin is meant to be automatic (from geocodeAddress above) — tapping the
+          // map to place it manually is only enabled as a fallback once geocoding has
+          // actually failed for the typed address, not as a general way to set location.
+          onMapClick={geocodeFailed ? (lat, lng) => setLocation({ lat, lng }) : undefined}
           pickedLocation={location}
           height={220}
         />

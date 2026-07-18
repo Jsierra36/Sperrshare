@@ -5,10 +5,18 @@ app/node_modules/
 app/dist/
 app/.expo/
 
-# Graphify generated artifacts (regenerate with `graphify update .`)
-graphify-out/cache/
-graphify-out/20*/
+# Graphify generated artifacts (regenerate with `graphify update .`) — dev-tooling
+# output, not part of the shipped app; kept out of the repo entirely.
+graphify-out/
+
+# AI coding assistant tooling/config (Claude Code) — dev-only, not part of the shipped
+# app; kept out of the repo so the tools used to build it aren't part of its history
+# going forward. Existing committed copies stay in git history unless asked to rewrite it.
+.claude/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Obsidian vault (docs/) local workspace state — not shared
+docs/.obsidian/

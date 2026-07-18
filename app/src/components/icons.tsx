@@ -90,6 +90,19 @@ export function IconChevronRight({ size = 24, color = '#000' }: IconProps) {
   );
 }
 
+export function IconLanguages({ size = 24, color = '#000' }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="m5 8 6 6" stroke={color} {...strokeProps} />
+      <Path d="m4 14 6-6 2-3" stroke={color} {...strokeProps} />
+      <Path d="M2 5h12" stroke={color} {...strokeProps} />
+      <Path d="M7 2h1" stroke={color} {...strokeProps} />
+      <Path d="m22 22-5-10-5 10" stroke={color} {...strokeProps} />
+      <Path d="M14 18h6" stroke={color} {...strokeProps} />
+    </Svg>
+  );
+}
+
 export function IconCamera({ size = 24, color = '#000' }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">

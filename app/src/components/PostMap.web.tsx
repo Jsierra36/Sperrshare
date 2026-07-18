@@ -1,14 +1,26 @@
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
 import L from 'leaflet';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 
 import type { Post } from '@/data/types';
 import { useTheme } from '@/context/theme-context';
+import { radiusToDeltas } from '@/lib/geo';
 
 const DEFAULT_CENTER: [number, number] = [52.2799, 8.0472];
 const DEFAULT_ZOOM = 13;
+const USER_RADIUS_METERS = 2000;
+
+function boundsAround(center: { lat: number; lng: number }, radiusMeters: number): L.LatLngBoundsExpression {
+  const { latDelta, lngDelta } = radiusToDeltas(center.lat, radiusMeters);
+  return [
+    [center.lat - latDelta, center.lng - lngDelta],
+    [center.lat + latDelta, center.lng + lngDelta],
+  ];
+}
 
 // Fixes Leaflet mis-measuring its container when it mounts inside a
 // tab/screen that was just switched to (container size is 0 at init time).
@@ -23,14 +35,18 @@ function InvalidateSizeOnMount() {
 
 // Small floating "recenter" button, Dott-style — top-right, white circle, target icon.
 // (Bottom-right is reserved for the add-listing / profile action buttons.)
-function RecenterControl() {
+function RecenterControl({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) {
   const { t } = useTranslation();
   const map = useMap();
   return (
     <button
       type="button"
       aria-label={t('map.recenter')}
-      onClick={() => map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)}
+      onClick={() =>
+        initialCenter
+          ? map.fitBounds(boundsAround(initialCenter, USER_RADIUS_METERS))
+          : map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
+      }
       style={{
         position: 'absolute',
         right: 12,
@@ -73,6 +89,18 @@ function pinIcon(color: string) {
   });
 }
 
+// Cluster badge shown instead of individual pins when posts are close together at the
+// current zoom level (Airbnb-style hotspot grouping) — same shape as pinIcon(), slightly
+// bigger, with the count instead of the sofa glyph. Mirrors ClusterPin in PostMap.tsx.
+function clusterIcon(count: number, color: string) {
+  return L.divIcon({
+    html: `<div style="background:${color};width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.25);color:#fff;font-weight:700;font-size:14px">${count}</div>`,
+    className: '',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+  });
+}
+
 function pickedLocationIcon() {
   return L.divIcon({
     html: `<div style="background:#FF8C00;width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.25)"><span style="font-size:16px">📍</span></div>`,
@@ -91,11 +119,26 @@ function ClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) 
   return null;
 }
 
+// Recenters once, the moment the user's real location first resolves (it arrives
+// asynchronously after permission + a GPS fix — see useUserLocation) — not on every
+// render, so it doesn't fight the user's own panning/zooming afterwards.
+function CenterOnUserLocation({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  const hasCenteredRef = useRef(false);
+  useEffect(() => {
+    if (!initialCenter || hasCenteredRef.current) return;
+    hasCenteredRef.current = true;
+    map.fitBounds(boundsAround(initialCenter, USER_RADIUS_METERS));
+  }, [initialCenter, map]);
+  return null;
+}
+
 export default function PostMap({
   posts,
   onSelectPost,
   onMapClick,
   pickedLocation,
+  initialCenter,
   height = 320,
   rounded = true,
 }: {
@@ -103,6 +146,9 @@ export default function PostMap({
   onSelectPost?: (post: Post) => void;
   onMapClick?: (lat: number, lng: number) => void;
   pickedLocation?: { lat: number; lng: number } | null;
+  // User's real position (see useUserLocation) — when available, the map recenters to a
+  // ~2km-radius view around it once, on first arrival, instead of the Osnabrück default.
+  initialCenter?: { lat: number; lng: number } | null;
   height?: number | string;
   rounded?: boolean;
 }) {
@@ -131,33 +177,44 @@ export default function PostMap({
         />
         <ClickHandler onMapClick={onMapClick} />
         <InvalidateSizeOnMount />
-        <RecenterControl />
-        {posts.map((post) => (
-          <Marker key={post.id} position={[post.lat, post.lng]} icon={pinIcon(colors.primary)}>
-            <Popup minWidth={180} closeButton={false}>
-              <div
-                role="button"
-                onClick={() => onSelectPost?.(post)}
-                style={{ cursor: 'pointer', width: 160 }}>
-                <img
-                  src={post.photoUri}
-                  alt={post.title}
-                  style={{
-                    width: '100%',
-                    height: 100,
-                    objectFit: 'cover',
-                    borderRadius: 10,
-                    marginBottom: 6,
-                    display: 'block',
-                  }}
-                />
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#191C1C', lineHeight: 1.3 }}>
-                  {post.title}
+        <CenterOnUserLocation initialCenter={initialCenter} />
+        <RecenterControl initialCenter={initialCenter} />
+        <MarkerClusterGroup
+          chunkedLoading
+          showCoverageOnHover={false}
+          maxClusterRadius={60}
+          // @types/leaflet.markercluster augments the 'leaflet' module with MarkerCluster,
+          // but that augmentation isn't resolving here (unrelated to the two libraries
+          // actually functioning at runtime — verified in-browser) — narrow `any` instead
+          // of fighting third-party type plumbing for one callback parameter.
+          iconCreateFunction={(cluster: any) => clusterIcon(cluster.getChildCount(), colors.primary)}>
+          {posts.map((post) => (
+            <Marker key={post.id} position={[post.lat, post.lng]} icon={pinIcon(colors.primary)}>
+              <Popup minWidth={180} closeButton={false}>
+                <div
+                  role="button"
+                  onClick={() => onSelectPost?.(post)}
+                  style={{ cursor: 'pointer', width: 160 }}>
+                  <img
+                    src={post.photoUri}
+                    alt={post.title}
+                    style={{
+                      width: '100%',
+                      height: 100,
+                      objectFit: 'cover',
+                      borderRadius: 10,
+                      marginBottom: 6,
+                      display: 'block',
+                    }}
+                  />
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#191C1C', lineHeight: 1.3 }}>
+                    {post.title}
+                  </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
         {pickedLocation && (
           <Marker position={[pickedLocation.lat, pickedLocation.lng]} icon={pickedLocationIcon()} />
         )}

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { IconBell, IconLifeBuoy, IconLogOut, IconSunMoon, IconUser } from '@/components/icons';
+import { IconBell, IconLanguages, IconLifeBuoy, IconLogOut, IconSunMoon, IconUser } from '@/components/icons';
 import SettingsRow from '@/components/SettingsRow';
 import { getCategories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
@@ -90,6 +90,12 @@ export default function ProfileScreen() {
         title={t('settings.design')}
         subtitle={t('settings.design_subtitle')}
         onPress={() => router.push('/design-settings')}
+      />
+      <SettingsRow
+        icon={<IconLanguages size={18} color={colors.text} />}
+        title={t('settings.language')}
+        subtitle={t('settings.language_subtitle')}
+        onPress={() => router.push('/language-settings')}
       />
       <SettingsRow
         icon={<IconLifeBuoy size={18} color={colors.text} />}
