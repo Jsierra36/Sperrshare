@@ -21,6 +21,8 @@ export default {
       subtitle: 'Füge ein Foto und ein paar Details hinzu, damit es jemand in der Nähe abholen kann.',
       add_photo: 'Foto hinzufügen',
       photo_hint: 'Zum Hochladen tippen',
+      photo_privacy_note:
+        'Wichtig: Fotografiere keine Briefkästen mit sichtbarem Namen, keine Personen und keine Autokennzeichen.',
       item_title: 'Titel des Gegenstands',
       item_title_placeholder: 'z. B. Holztisch',
       description: 'Beschreibung',
@@ -28,7 +30,8 @@ export default {
       category: 'Kategorie',
       category_hint: '(eine oder mehrere auswählen)',
       address: 'Adresse',
-      address_placeholder: 'Straße und Hausnummer',
+      address_hint: '(Hausnummer nicht nötig — Straße oder Pin auf der Karte reicht)',
+      address_placeholder: 'Straße (Hausnummer optional)',
       pickup_date: 'Abholtermin (optional)',
       pickup_date_placeholder: 'Datum auswählen',
       clear_date: 'Datum entfernen',
@@ -48,7 +51,6 @@ export default {
     detail: {
       title: 'Details zur Anzeige',
       available: 'Verfügbar',
-      seen_by: 'Gemeldet von',
       description: 'Beschreibung',
       location_exact: 'Abholort',
       location_locked: 'Melde dich an, um den genauen Abholort zu sehen',

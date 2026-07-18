@@ -21,6 +21,8 @@ export default {
       subtitle: 'Add a photo and a few details so someone nearby can pick it up.',
       add_photo: 'Add a photo',
       photo_hint: 'Tap to upload',
+      photo_privacy_note:
+        "Important: don't photograph mailboxes with a visible name, people, or car license plates.",
       item_title: 'Item title',
       item_title_placeholder: 'e.g. Wooden table',
       description: 'Description',
@@ -28,7 +30,8 @@ export default {
       category: 'Category',
       category_hint: '(select one or more)',
       address: 'Address',
-      address_placeholder: 'Street and number',
+      address_hint: "(house number not needed — street name or a pin on the map is enough)",
+      address_placeholder: 'Street (house number optional)',
       pickup_date: 'Pickup date (optional)',
       pickup_date_placeholder: 'Select a date',
       clear_date: 'Clear date',
@@ -48,7 +51,6 @@ export default {
     detail: {
       title: 'Listing details',
       available: 'Available',
-      seen_by: 'Reported by',
       description: 'Description',
       location_exact: 'Pickup location',
       location_locked: 'Log in to see the exact pickup location',

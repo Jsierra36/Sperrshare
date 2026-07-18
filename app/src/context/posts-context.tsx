@@ -5,7 +5,7 @@ import { seedPosts } from '@/data/seed-posts';
 import type { Post } from '@/data/types';
 import i18n from '@/i18n';
 
-const STORAGE_KEY = 'sperrshare.posts.v5'; // v5: tidier demo photos
+const STORAGE_KEY = 'sperrshare.posts.v6'; // v6: 4 listings, verified real addresses, privacy-checked photos
 const EXPIRY_DAYS_WITHOUT_PICKUP_DATE = 14;
 
 type NewPostInput = {

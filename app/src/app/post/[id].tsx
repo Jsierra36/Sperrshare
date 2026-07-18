@@ -80,9 +80,6 @@ export default function PostDetailScreen() {
       </View>
 
       <Text style={styles.title}>{post.title}</Text>
-      <Text style={styles.meta}>
-        {t('detail.seen_by')} {post.userName}
-      </Text>
 
       {post.description ? (
         <>
@@ -184,7 +181,6 @@ const createStyles = (colors: ColorPalette) =>
     },
     badgeText: { fontFamily: fonts.label, fontSize: 12, color: colors.primaryDark },
     title: { fontFamily: fonts.heading, fontSize: 22, color: colors.text, marginTop: spacing.md },
-    meta: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, marginTop: spacing.xs },
     sectionLabel: {
       fontFamily: fonts.headingSemibold,
       fontSize: 14,

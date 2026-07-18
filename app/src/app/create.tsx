@@ -204,6 +204,7 @@ export default function CreateScreen() {
         )}
       </Pressable>
       {photoError && <Text style={styles.errorText}>{photoError}</Text>}
+      <Text style={styles.hint}>⚠️ {t('create.photo_privacy_note')}</Text>
 
       <Text style={styles.label}>{t('create.item_title')}</Text>
       <TextInput
@@ -246,7 +247,9 @@ export default function CreateScreen() {
         })}
       </View>
 
-      <Text style={styles.label}>{t('create.address')}</Text>
+      <Text style={styles.label}>
+        {t('create.address')} <Text style={styles.labelHint}>{t('create.address_hint')}</Text>
+      </Text>
       <TextInput
         style={styles.input}
         value={addressText}
