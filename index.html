@@ -235,16 +235,29 @@
   /* Real map tiles — CARTO Voyager's label-free variant (voyager_nolabels), so the mockup
      shows streets/parks/water for texture without any place or street names being
      readable. This is a landing-page-only choice; the real app (PostMap.web.tsx) keeps
-     labels since you actually need them to navigate a real map. Stacked top/bottom via
-     two background-images instead of an abstract CSS approximation. */
+     labels since you actually need them to navigate a real map. Two tiles stacked
+     top/bottom; the top one sits on a masked layer that fades out before its lower
+     edge (~82% of the screen height), so the two crossfade instead of meeting in a
+     visible hard seam. */
   .map-tile {
     position: absolute;
     inset: 0;
-    background-image: url('assets/map-tile-top.png'), url('assets/map-tile-bottom.png');
-    background-position: top center, bottom center;
-    background-size: 160% auto, 160% auto;
-    background-repeat: no-repeat, no-repeat;
+    background-image: url('assets/map-tile-bottom.png');
+    background-position: bottom center;
+    background-size: 160% auto;
+    background-repeat: no-repeat;
     background-color: #DCE8D6;
+  }
+  .map-tile::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('assets/map-tile-top.png');
+    background-position: top center;
+    background-size: 160% auto;
+    background-repeat: no-repeat;
+    -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 78%);
+    mask-image: linear-gradient(to bottom, #000 50%, transparent 78%);
   }
   .map-attribution {
     text-align: center;
