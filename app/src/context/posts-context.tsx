@@ -6,8 +6,11 @@ import type { Post } from '@/data/types';
 import i18n from '@/i18n';
 
 const STORAGE_KEY = 'sperrshare.posts.v7'; // v7: photoUri -> photoUris (1-3 photos)
+const LEGACY_STORAGE_KEY_V6 = 'sperrshare.posts.v6';
 const EXPIRY_DAYS_WITHOUT_PICKUP_DATE = 14;
-const MAX_PHOTOS = 3;
+// Single source of truth for the photo cap — create.tsx imports this so the UI
+// and this validation layer can't drift apart.
+export const MAX_PHOTOS = 3;
 
 type NewPostInput = {
   userId: string;
@@ -48,10 +51,34 @@ export function PostsProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-      setPosts(raw ? JSON.parse(raw) : seedPosts);
+    (async () => {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        setPosts(JSON.parse(raw));
+        setIsReady(true);
+        return;
+      }
+      // One-time migration from the v6 schema (single photoUri) so existing users'
+      // posts survive the upgrade instead of being silently replaced by seed data.
+      const legacyRaw = await AsyncStorage.getItem(LEGACY_STORAGE_KEY_V6);
+      if (legacyRaw) {
+        try {
+          const legacyPosts = JSON.parse(legacyRaw) as (Omit<Post, 'photoUris'> & { photoUri?: string })[];
+          const migrated: Post[] = legacyPosts.map(({ photoUri, ...rest }) => ({
+            ...rest,
+            photoUris: photoUri ? [photoUri] : [],
+          }));
+          setPosts(migrated);
+          setIsReady(true);
+          await AsyncStorage.removeItem(LEGACY_STORAGE_KEY_V6);
+          return;
+        } catch {
+          // Corrupt legacy data — fall through to seeds rather than crash on load.
+        }
+      }
+      setPosts(seedPosts);
       setIsReady(true);
-    });
+    })();
   }, []);
 
   useEffect(() => {

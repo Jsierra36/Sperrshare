@@ -19,7 +19,9 @@ import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
 
-const CONTENT_MAX_WIDTH = 600; // matches styles.content below
+// Single source for the content column's max width — used both by styles.content and by
+// the carousel-width math, so the two can't drift apart.
+const CONTENT_MAX_WIDTH = 600;
 
 export default function PostDetailScreen() {
   const { t } = useTranslation();
@@ -201,7 +203,7 @@ const createStyles = (colors: ColorPalette) =>
       padding: spacing.md,
       paddingBottom: spacing.xl,
       width: '100%',
-      maxWidth: 600,
+      maxWidth: CONTENT_MAX_WIDTH,
       alignSelf: 'center',
     },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },

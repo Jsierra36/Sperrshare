@@ -17,14 +17,13 @@ import DatePickerField from '@/components/DatePickerField';
 import PostMap from '@/components/PostMap';
 import { categories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
-import { usePosts } from '@/context/posts-context';
+import { MAX_PHOTOS, usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
 import { geocodeAddress, reverseGeocode } from '@/lib/geocoding';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
 
 const GEOCODE_DEBOUNCE_MS = 900;
 const MAX_PICKUP_DAYS_AHEAD = 40;
-const MAX_PHOTOS = 3;
 
 export default function CreateScreen() {
   const { t, i18n } = useTranslation();
@@ -110,18 +109,30 @@ export default function CreateScreen() {
   // they must never disagree. Nominatim's reverse endpoint already resolves to the nearest
   // known street when the tap doesn't land exactly on one (see reverseGeocode in lib/geocoding).
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  // Rapid re-taps each fire their own Nominatim request; responses can arrive out of order,
+  // so only the latest tap's response may write addressText (else a slow earlier response
+  // would overwrite the newer pin's street with the older one's).
+  const tapSeqRef = useRef(0);
   const handleMapTap = async (lat: number, lng: number) => {
+    const seq = ++tapSeqRef.current;
     setLocation({ lat, lng });
     setIsReverseGeocoding(true);
     try {
       const street = await reverseGeocode(lat, lng, i18n.language);
+      if (seq !== tapSeqRef.current) return; // superseded by a newer tap
       if (street) {
         lastResolvedAddressRef.current = street;
         setAddressText(street);
         setGeocodeFailed(false);
+      } else {
+        // No street resolvable at this point (water, open land) — surface the same
+        // "not found" hint the typed-address path shows, instead of failing silently.
+        setGeocodeFailed(true);
       }
+    } catch {
+      if (seq === tapSeqRef.current) setGeocodeFailed(true);
     } finally {
-      setIsReverseGeocoding(false);
+      if (seq === tapSeqRef.current) setIsReverseGeocoding(false);
     }
   };
 
@@ -134,7 +145,13 @@ export default function CreateScreen() {
   const maxPickupDate = new Date();
   maxPickupDate.setHours(0, 0, 0, 0);
   maxPickupDate.setDate(maxPickupDate.getDate() + MAX_PICKUP_DAYS_AHEAD);
-  const pickupDateInRange = !pickupDate || new Date(`${pickupDate}T00:00:00`) <= maxPickupDate;
+  // The stored date of the post being edited is exempt from the 40-day cap — it was valid
+  // when set (the cap counts from *today*), and enforcing it retroactively would block
+  // unrelated edits (title, photo) until the user first touched the date.
+  const isStoredEditDate =
+    !!editingPost && pickupDate === (editingPost.pickupDate ? editingPost.pickupDate.slice(0, 10) : null);
+  const pickupDateInRange =
+    !pickupDate || isStoredEditDate || new Date(`${pickupDate}T00:00:00`) <= maxPickupDate;
 
   const canSubmit =
     photoUris.length > 0 &&
