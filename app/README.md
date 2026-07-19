@@ -1,56 +1,49 @@
-# Welcome to your Expo app 👋
+# Sperrshare
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Bevor es im Abfall landet, verdient es eine zweite Chance.**
 
-## Get started
+Sperrshare connects people who want to get rid of bulky waste (Sperrmüll) with
+neighbors who can give it a free second life. Items are posted with a photo and
+a location, appear as pins on a live map, and disappear automatically once
+collected or expired — no chat, no coordination, just go and pick it up.
 
-1. Install dependencies
+**Live demo:** https://jsierra36.github.io/Sperrshare/
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- 🗺️ Map-first UI — every listing is a pin; nearby pins cluster into hotspots
+- 📷 1–3 photos per listing, with a swipeable carousel
+- 📍 Address geocoding (Nominatim/OSM) plus manual pin placement with
+  reverse-geocoded street names
+- 🗓️ Optional pickup date with automatic listing expiry
+- 🌗 Light/dark theme, German/English (i18n, German by default)
+- 🔒 Exact addresses are only visible to logged-in users
 
-   ```bash
-   npx expo start
-   ```
+## Tech stack
 
-In the output, you'll find options to open the app in a
+- [Expo](https://expo.dev) / React Native (single codebase for web, iOS and Android)
+- Expo Router, react-native-maps (native) / Leaflet (web)
+- OpenStreetMap + CARTO basemaps, Nominatim geocoding — no paid map APIs
+- i18next for localization
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+> The current build is a demo: authentication and listings are mocked locally
+> (AsyncStorage). A real backend (Supabase Auth + Postgres + RLS) is the next
+> step on the roadmap.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Development
 
 ```bash
-npm run reset-project
+npm install
+npm run web       # dev server in the browser
+npm run android   # or iOS with: npm run ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Deploy the web demo + landing page to GitHub Pages:
 
-### Other setup steps
+```bash
+npm run deploy:gh-pages
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## License
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See [LICENSE](./LICENSE).
