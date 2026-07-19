@@ -1,28 +1,33 @@
-# Dependencies
-app/node_modules/
+# ============================================================================
+# WHITELIST MODE — everything in this repo is ignored unless explicitly
+# allowed below. This repo is PUBLIC (GitHub Pages needs it to be), so only
+# what the app needs to build and deploy may ever be committed:
+#
+#   app/       -> the React Native/Expo app (source)
+#   landing/   -> the static landing page
+#
+# Everything else — internal/ (strategy docs, design exports, reference
+# images), graphify-out/, .claude/, and ANY new folder created at the root —
+# is ignored automatically. To publish something new, add a !/rule here
+# deliberately; nothing becomes public by accident.
+# ============================================================================
 
-# Build output
+/*
+!/app
+!/landing
+!/.gitignore
+
+# --- Exclusions inside the whitelisted folders -------------------------------
+
+# Dependencies & build output
+app/node_modules/
 app/dist/
 app/.expo/
+app/expo-env.d.ts
 
-# Graphify generated artifacts (regenerate with `graphify update .`) — dev-tooling
-# output, not part of the shipped app; kept out of the repo entirely.
-graphify-out/
+# AI coding assistant tooling/config (dev-only)
+app/.claude/
 
-# AI coding assistant tooling/config (Claude Code) — dev-only, not part of the shipped
-# app; kept out of the repo so the tools used to build it aren't part of its history
-# going forward. Existing committed copies stay in git history unless asked to rewrite it.
-.claude/
-
-# Internal/private material — strategy docs, design exports, reference images.
-# Only app/ and landing/ belong in this public repo; these stay local-only.
-docs/
-Stich/
-Images/
-
-# OS
+# OS files (any level)
 .DS_Store
 Thumbs.db
-
-# Obsidian vault (docs/) local workspace state — not shared
-docs/.obsidian/
