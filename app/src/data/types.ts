@@ -17,7 +17,7 @@ export type Post = {
   addressText: string;
   lat: number;
   lng: number;
-  photoUri: string;
+  photoUris: string[]; // 1 to 3 photos
   pickupDate: string | null; // ISO date, optional
   status: PostStatus;
   createdAt: string; // ISO datetime

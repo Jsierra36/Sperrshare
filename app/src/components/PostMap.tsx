@@ -14,9 +14,10 @@ import {
 import { Path, Svg } from 'react-native-svg';
 
 import type { Post } from '@/data/types';
+import { IconLocate } from '@/components/icons';
 import { useTheme } from '@/context/theme-context';
 import { radiusToDeltas } from '@/lib/geo';
-import { fonts, radius, shadow, spacing } from '@/theme/colors';
+import { fabSize, fonts, radius, shadow, spacing } from '@/theme/colors';
 
 type Props = {
   posts: Post[];
@@ -134,7 +135,8 @@ const pinStyles = StyleSheet.create({
 });
 
 // Small floating "recenter" button, same visual language as the web RecenterControl
-// and the map screen's FABs (index.tsx) — white circle, floating top-right.
+// and the map screen's FABs (index.tsx) — white circle, floating top-right, same
+// diameter as those FABs (fabSize) so all three floating controls read as one family.
 function RecenterControl({ onPress, label }: { onPress: () => void; label: string }) {
   return (
     <Pressable
@@ -142,7 +144,7 @@ function RecenterControl({ onPress, label }: { onPress: () => void; label: strin
       accessibilityLabel={label}
       style={styles.recenterButton}
       onPress={onPress}>
-      <Text style={{ fontSize: 18 }}>🎯</Text>
+      <IconLocate size={20} color="#191C1C" />
     </Pressable>
   );
 }
@@ -241,7 +243,7 @@ export default function PostMap({
                 accessibilityLabel={post.title}
                 style={styles.calloutCard}
                 onPress={() => onSelectPost?.(post)}>
-                <Image source={{ uri: post.photoUri }} style={styles.calloutImage} />
+                <Image source={{ uri: post.photoUris[0] }} style={styles.calloutImage} />
                 <Text style={styles.calloutTitle} numberOfLines={2}>
                   {post.title}
                 </Text>
@@ -272,9 +274,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     top: 12,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: fabSize,
+    height: fabSize,
+    borderRadius: fabSize / 2,
     backgroundColor: 'white',
     alignItems: 'center',
     justifyContent: 'center',

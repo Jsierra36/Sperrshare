@@ -9,6 +9,7 @@ type Props = {
   value: string | null; // ISO date, yyyy-mm-dd
   onChange: (iso: string | null) => void;
   placeholder: string;
+  maxDaysAhead?: number; // disables dates beyond today + this many days
 };
 
 function toIsoDate(d: Date) {
@@ -21,7 +22,7 @@ function startOfDay(d: Date) {
   return c;
 }
 
-export default function DatePickerField({ value, onChange, placeholder }: Props) {
+export default function DatePickerField({ value, onChange, placeholder, maxDaysAhead }: Props) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -30,6 +31,12 @@ export default function DatePickerField({ value, onChange, placeholder }: Props)
   const selected = value ? new Date(`${value}T00:00:00`) : null;
   const [viewDate, setViewDate] = useState(() => selected ?? new Date());
   const today = startOfDay(new Date());
+  const maxDate = useMemo(() => {
+    if (maxDaysAhead === undefined) return null;
+    const d = startOfDay(new Date());
+    d.setDate(d.getDate() + maxDaysAhead);
+    return d;
+  }, [maxDaysAhead]);
 
   const monthLabel = useMemo(
     () => new Intl.DateTimeFormat(i18n.language, { month: 'long', year: 'numeric' }).format(viewDate),
@@ -114,11 +121,13 @@ export default function DatePickerField({ value, onChange, placeholder }: Props)
                 {row.map((day, di) => {
                   if (!day) return <View key={di} style={styles.dayCell} />;
                   const isPast = startOfDay(day) < today;
+                  const isTooFar = !!maxDate && startOfDay(day) > maxDate;
+                  const isDisabled = isPast || isTooFar;
                   const isSelected = !!selected && toIsoDate(day) === toIsoDate(selected);
                   return (
                     <Pressable
                       key={di}
-                      disabled={isPast}
+                      disabled={isDisabled}
                       style={[styles.dayCell, isSelected && styles.dayCellSelected]}
                       onPress={() => {
                         onChange(toIsoDate(day));
@@ -127,7 +136,7 @@ export default function DatePickerField({ value, onChange, placeholder }: Props)
                       <Text
                         style={[
                           styles.dayText,
-                          isPast && styles.dayTextDisabled,
+                          isDisabled && styles.dayTextDisabled,
                           isSelected && styles.dayTextSelected,
                         ]}>
                         {day.getDate()}

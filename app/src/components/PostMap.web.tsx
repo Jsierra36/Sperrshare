@@ -7,8 +7,10 @@ import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 're
 import MarkerClusterGroup from 'react-leaflet-cluster';
 
 import type { Post } from '@/data/types';
+import { IconLocate } from '@/components/icons';
 import { useTheme } from '@/context/theme-context';
 import { radiusToDeltas } from '@/lib/geo';
+import { fabSize } from '@/theme/colors';
 
 const DEFAULT_CENTER: [number, number] = [52.2799, 8.0472];
 const DEFAULT_ZOOM = 13;
@@ -33,7 +35,8 @@ function InvalidateSizeOnMount() {
   return null;
 }
 
-// Small floating "recenter" button, Dott-style — top-right, white circle, target icon.
+// Small floating "recenter" button — top-right, white circle, same diameter as the
+// map screen's FABs (index.tsx) so all floating controls read as one family.
 // (Bottom-right is reserved for the add-listing / profile action buttons.)
 function RecenterControl({ initialCenter }: { initialCenter?: { lat: number; lng: number } | null }) {
   const { t } = useTranslation();
@@ -52,19 +55,18 @@ function RecenterControl({ initialCenter }: { initialCenter?: { lat: number; lng
         right: 12,
         top: 12,
         zIndex: 1000,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: fabSize,
+        height: fabSize,
+        borderRadius: fabSize / 2,
         border: 'none',
         background: 'white',
         boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 18,
         cursor: 'pointer',
       }}>
-      🎯
+      <IconLocate size={20} color="#191C1C" />
     </button>
   );
 }
@@ -196,7 +198,7 @@ export default function PostMap({
                   onClick={() => onSelectPost?.(post)}
                   style={{ cursor: 'pointer', width: 160 }}>
                   <img
-                    src={post.photoUri}
+                    src={post.photoUris[0]}
                     alt={post.title}
                     style={{
                       width: '100%',

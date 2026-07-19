@@ -1,13 +1,25 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { getCategories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
 import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
+
+const CONTENT_MAX_WIDTH = 600; // matches styles.content below
 
 export default function PostDetailScreen() {
   const { t } = useTranslation();
@@ -17,10 +29,16 @@ export default function PostDetailScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const router = useRouter();
+  // Deterministic from window size (matches styles.content's width:100%/maxWidth/padding)
+  // instead of measuring via onLayout — onLayout never fired on this RN-web version for a
+  // ScrollView/View in this tree, leaving carousel items stuck at their initial width.
+  const { width: windowWidth } = useWindowDimensions();
+  const carouselWidth = Math.min(windowWidth, CONTENT_MAX_WIDTH) - spacing.md * 2;
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const post = posts.find((p) => p.id === id);
 
@@ -64,12 +82,28 @@ export default function PostDetailScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Image source={{ uri: post.photoUri }} style={styles.image} />
+      <View style={styles.carouselContainer}>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={(e) => {
+            setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / carouselWidth));
+          }}>
+          {post.photoUris.map((uri, index) => (
+            <Image key={uri + index} source={{ uri }} style={[styles.image, { width: carouselWidth }]} />
+          ))}
+        </ScrollView>
+        {post.photoUris.length > 1 && (
+          <View style={styles.dotsRow}>
+            {post.photoUris.map((_, index) => (
+              <View key={index} style={[styles.dot, index === activeIndex && styles.dotActive]} />
+            ))}
+          </View>
+        )}
+      </View>
 
       <View style={styles.badgeRow}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>✅ {t('detail.available')}</Text>
-        </View>
         {postCategories.map((category) => (
           <View key={category.id} style={[styles.badge, { backgroundColor: category.color + '22' }]}>
             <Text style={[styles.badgeText, { color: category.color }]}>
@@ -171,7 +205,25 @@ const createStyles = (colors: ColorPalette) =>
       alignSelf: 'center',
     },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-    image: { width: '100%', height: 240, borderRadius: radius.xl, backgroundColor: colors.surfaceMuted },
+    carouselContainer: {
+      width: '100%',
+      height: 240,
+      borderRadius: radius.xl,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceMuted,
+    },
+    image: { height: 240, backgroundColor: colors.surfaceMuted },
+    dotsRow: {
+      position: 'absolute',
+      bottom: spacing.sm,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
+    dotActive: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
     badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
     badge: {
       backgroundColor: colors.secondaryContainer,

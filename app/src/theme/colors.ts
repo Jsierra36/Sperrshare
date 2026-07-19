@@ -71,6 +71,10 @@ export const spacing = {
   xl: 32,
 };
 
+// Floating action button diameter (profile/add on the map screen, recenter control on
+// PostMap) — 34px base bumped 15% for visibility, per user request.
+export const fabSize = 39;
+
 // Reusable elevation for cards/buttons — subtle, tinted with the primary color
 // per the "Ambient Shadows" note in docs/design.md rather than harsh black shadows.
 // RN Web wants `boxShadow`; native RN wants shadow*/elevation — Platform.select covers both

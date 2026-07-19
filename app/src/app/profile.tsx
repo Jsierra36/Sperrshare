@@ -32,7 +32,6 @@ export default function ProfileScreen() {
     [allPosts, user]
   );
   const activeCount = myPosts.filter((p) => p.status === 'active').length;
-  const collectedCount = myPosts.filter((p) => p.status === 'collected').length;
 
   if (!user) return null;
 
@@ -46,17 +45,13 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Pressable style={styles.header} onPress={() => router.push('/account-settings')}>
-        {user.avatarUri ? (
-          <Image source={{ uri: user.avatarUri }} style={styles.avatarImage} />
-        ) : (
-          <LinearGradient
-            colors={[colors.accent, colors.primary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </LinearGradient>
-        )}
+        <LinearGradient
+          colors={[colors.accent, colors.primary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </LinearGradient>
         <Text style={styles.name}>{user.name}</Text>
         <Text style={styles.email}>{user.email}</Text>
 
@@ -64,10 +59,6 @@ export default function ProfileScreen() {
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>{activeCount}</Text>
             <Text style={styles.statLabel}>{t('profile.status_active')}</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{collectedCount}</Text>
-            <Text style={styles.statLabel}>{t('profile.status_collected')}</Text>
           </View>
         </View>
       </Pressable>
@@ -119,7 +110,7 @@ export default function ProfileScreen() {
               key={post.id}
               style={styles.card}
               onPress={() => router.push(`/post/${post.id}`)}>
-              <Image source={{ uri: post.photoUri }} style={styles.cardImage} />
+              <Image source={{ uri: post.photoUris[0] }} style={styles.cardImage} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle} numberOfLines={1}>
                   {post.title}
@@ -128,11 +119,13 @@ export default function ProfileScreen() {
                   {postCategories.map((c) => c.icon).join(' ')} {postCategories[0]?.name}
                   {postCategories.length > 1 ? ` +${postCategories.length - 1}` : ''}
                 </Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                  <Text style={[styles.statusBadgeText, { color: statusStyle.fg }]}>
-                    {t(STATUS_LABEL_KEY[post.status])}
-                  </Text>
-                </View>
+                {post.status !== 'collected' && (
+                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                    <Text style={[styles.statusBadgeText, { color: statusStyle.fg }]}>
+                      {t(STATUS_LABEL_KEY[post.status])}
+                    </Text>
+                  </View>
+                )}
               </View>
               {post.status === 'active' && (
                 <Pressable
@@ -180,13 +173,6 @@ const createStyles = (colors: ColorPalette) =>
       justifyContent: 'center',
       marginBottom: spacing.sm,
       ...shadow.button,
-    },
-    avatarImage: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-      marginBottom: spacing.sm,
-      backgroundColor: colors.surfaceMuted,
     },
     avatarText: { fontFamily: fonts.heading, fontSize: 28, color: '#fff' },
     name: { fontFamily: fonts.heading, fontSize: 20, color: colors.text },

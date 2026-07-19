@@ -103,15 +103,16 @@ export function IconLanguages({ size = 24, color = '#000' }: IconProps) {
   );
 }
 
-export function IconCamera({ size = 24, color = '#000' }: IconProps) {
+// Standard "recenter to my location" glyph (Lucide's Locate icon) — minimalist crosshair,
+// used instead of a target/bullseye emoji to match the rest of the app's line-icon set.
+export function IconLocate({ size = 24, color = '#000' }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"
-        stroke={color}
-        {...strokeProps}
-      />
-      <Circle cx="12" cy="13" r="3" stroke={color} {...strokeProps} />
+      <Path d="M2 12h3" stroke={color} {...strokeProps} />
+      <Path d="M19 12h3" stroke={color} {...strokeProps} />
+      <Path d="M12 2v3" stroke={color} {...strokeProps} />
+      <Path d="M12 19v3" stroke={color} {...strokeProps} />
+      <Circle cx="12" cy="12" r="7" stroke={color} {...strokeProps} />
     </Svg>
   );
 }

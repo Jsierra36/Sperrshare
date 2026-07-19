@@ -11,6 +11,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import ErrorBoundary from '@/components/ErrorBoundary';
 import LoginScreen from '@/components/LoginScreen';
 import SplashScreen from '@/components/SplashScreen';
 import { AuthProvider, useAuth } from '@/context/auth-context';
@@ -86,7 +87,9 @@ function AppShell() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <AppShell />
+      <ErrorBoundary>
+        <AppShell />
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

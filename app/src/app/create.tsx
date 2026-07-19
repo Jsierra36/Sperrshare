@@ -1,11 +1,10 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Image,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,14 +19,12 @@ import { categories } from '@/data/categories';
 import { useAuth } from '@/context/auth-context';
 import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
-import { geocodeAddress } from '@/lib/geocoding';
+import { geocodeAddress, reverseGeocode } from '@/lib/geocoding';
 import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
 
-const DEFAULT_PICKUP_LOCATION = { lat: 52.2799, lng: 8.0472 };
 const GEOCODE_DEBOUNCE_MS = 900;
-// Official Osnabrück city page for scheduling a municipal Sperrmüll pickup.
-const MUNICIPAL_PICKUP_URL =
-  'https://nachhaltig.osnabrueck.de/de/abfall/muellabfuhr/sperrmuell/sperrmuell-anmelden/';
+const MAX_PICKUP_DAYS_AHEAD = 40;
+const MAX_PHOTOS = 3;
 
 export default function CreateScreen() {
   const { t, i18n } = useTranslation();
@@ -41,14 +38,13 @@ export default function CreateScreen() {
   const editingPost = editId ? allPosts.find((p) => p.id === editId && p.userId === user?.id) : undefined;
   const isEditing = !!editingPost;
 
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [addressText, setAddressText] = useState('');
   const [pickupDate, setPickupDate] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [linkError, setLinkError] = useState<string | null>(null);
 
   // "Adjust state during render" (React docs pattern) instead of an effect, since this
   // only needs to run once, the moment `editingPost` first becomes available — an effect
@@ -56,7 +52,7 @@ export default function CreateScreen() {
   const [loadedEditId, setLoadedEditId] = useState<string | null>(null);
   if (editingPost && loadedEditId !== editingPost.id) {
     setLoadedEditId(editingPost.id);
-    setPhotoUri(editingPost.photoUri);
+    setPhotoUris(editingPost.photoUris);
     setTitle(editingPost.title);
     setDescription(editingPost.description);
     setCategoryIds(editingPost.categoryIds);
@@ -73,12 +69,18 @@ export default function CreateScreen() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeFailed, setGeocodeFailed] = useState(false);
   const addressTooShort = addressText.trim().length > 0 && addressText.trim().length < 5;
+  // Address most recently written by *us* (reverse-geocoded from a manual pin tap below) —
+  // lets the forward-geocode effect below tell "the user typed this" apart from "we just
+  // set this from the pin", so tapping the map doesn't immediately re-geocode its own result.
+  const lastResolvedAddressRef = useRef<string | null>(null);
   // Skip geocoding while the address still matches the listing being edited — its stored
   // lat/lng is already correct for that exact string. Without this, saving an edit that
   // only touched (say) the title would silently re-geocode the unchanged address and
   // could move the pin to a different match entirely (confirmed: Nominatim resolved an
   // unrelated "Neuer Graben" edit to a wrong city, overwriting a correct manual pin).
-  const skipGeocode = !!editingPost && addressText === editingPost.addressText;
+  const skipGeocode =
+    (!!editingPost && addressText === editingPost.addressText) ||
+    (addressText.length > 0 && addressText === lastResolvedAddressRef.current);
   useEffect(() => {
     if (skipGeocode) return;
     const query = addressText.trim();
@@ -103,22 +105,48 @@ export default function CreateScreen() {
     return () => clearTimeout(handle);
   }, [addressText, i18n.language, skipGeocode]);
 
+  // Manual pin placement (always available, not just when geocoding fails) — reverse-geocodes
+  // the tapped point so the address field and the pin stay coherent, per the requirement that
+  // they must never disagree. Nominatim's reverse endpoint already resolves to the nearest
+  // known street when the tap doesn't land exactly on one (see reverseGeocode in lib/geocoding).
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const handleMapTap = async (lat: number, lng: number) => {
+    setLocation({ lat, lng });
+    setIsReverseGeocoding(true);
+    try {
+      const street = await reverseGeocode(lat, lng, i18n.language);
+      if (street) {
+        lastResolvedAddressRef.current = street;
+        setAddressText(street);
+        setGeocodeFailed(false);
+      }
+    } finally {
+      setIsReverseGeocoding(false);
+    }
+  };
+
   const toggleCategory = (id: string) => {
     setCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
   };
 
+  const maxPickupDate = new Date();
+  maxPickupDate.setHours(0, 0, 0, 0);
+  maxPickupDate.setDate(maxPickupDate.getDate() + MAX_PICKUP_DAYS_AHEAD);
+  const pickupDateInRange = !pickupDate || new Date(`${pickupDate}T00:00:00`) <= maxPickupDate;
+
   const canSubmit =
-    !!photoUri &&
+    photoUris.length > 0 &&
     title.trim().length > 0 &&
     addressText.trim().length > 0 &&
     categoryIds.length > 0 &&
-    !!location;
+    !!location &&
+    pickupDateInRange;
 
   const [isPickingPhoto, setIsPickingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const pickPhoto = async () => {
+  const addPhoto = async () => {
     setPhotoError(null);
     setIsPickingPhoto(true);
     try {
@@ -127,7 +155,7 @@ export default function CreateScreen() {
         quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) {
-        setPhotoUri(result.assets[0].uri);
+        setPhotoUris((prev) => [...prev, result.assets[0].uri].slice(0, MAX_PHOTOS));
       }
     } catch (e) {
       setPhotoError(e instanceof Error ? e.message : t('errors.photo_pick_failed'));
@@ -135,11 +163,18 @@ export default function CreateScreen() {
       setIsPickingPhoto(false);
     }
   };
+  const removePhoto = (index: number) => {
+    setPhotoUris((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submit = async () => {
     if (!canSubmit || !user || !location || isSubmitting) return;
+    if (!pickupDateInRange) {
+      setSubmitError(t('errors.pickup_date_out_of_range', { count: MAX_PICKUP_DAYS_AHEAD }));
+      return;
+    }
     setSubmitError(null);
     setIsSubmitting(true);
     try {
@@ -154,7 +189,7 @@ export default function CreateScreen() {
           addressText: addressText.trim(),
           lat: location.lat,
           lng: location.lng,
-          photoUri: photoUri!,
+          photoUris,
           pickupDate,
         });
         router.replace(`/post/${editingPost.id}`);
@@ -170,7 +205,7 @@ export default function CreateScreen() {
         addressText: addressText.trim(),
         lat: location.lat,
         lng: location.lng,
-        photoUri: photoUri!,
+        photoUris,
         pickupDate,
       });
       router.replace(`/post/${post.id}`);
@@ -185,24 +220,40 @@ export default function CreateScreen() {
       <Text style={styles.title}>{isEditing ? t('create.edit_title') : t('create.title')}</Text>
       <Text style={styles.subtitle}>{t('create.subtitle')}</Text>
 
-      <Text style={styles.label}>{t('create.add_photo')}</Text>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('create.add_photo')}
-        style={styles.photoBox}
-        onPress={pickPhoto}
-        disabled={isPickingPhoto}>
-        {isPickingPhoto ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-        ) : (
-          <>
-            <Text style={{ fontSize: 28 }}>📷</Text>
-            <Text style={styles.photoHint}>{t('create.photo_hint')}</Text>
-          </>
+      <Text style={styles.label}>
+        {t('create.add_photo')} <Text style={styles.labelHint}>{t('create.photo_count_hint')}</Text>
+      </Text>
+      <View style={styles.photoRow}>
+        {photoUris.map((uri, index) => (
+          <View key={uri + index} style={styles.photoThumbBox}>
+            <Image source={{ uri }} style={styles.photoPreview} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('create.remove_photo')}
+              style={styles.photoRemoveButton}
+              onPress={() => removePhoto(index)}>
+              <Text style={styles.photoRemoveButtonText}>✕</Text>
+            </Pressable>
+          </View>
+        ))}
+        {photoUris.length < MAX_PHOTOS && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('create.add_photo')}
+            style={styles.photoAddBox}
+            onPress={addPhoto}
+            disabled={isPickingPhoto}>
+            {isPickingPhoto ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <>
+                <Text style={{ fontSize: 24 }}>📷</Text>
+                <Text style={styles.photoHint}>{t('create.photo_hint')}</Text>
+              </>
+            )}
+          </Pressable>
         )}
-      </Pressable>
+      </View>
       {photoError && <Text style={styles.errorText}>{photoError}</Text>}
       <Text style={styles.hint}>⚠️ {t('create.photo_privacy_note')}</Text>
 
@@ -258,56 +309,40 @@ export default function CreateScreen() {
         placeholderTextColor={colors.textMuted}
         maxLength={200}
       />
-      <Text style={styles.hint}>
-        {isGeocoding
-          ? t('create.geocoding')
-          : geocodeFailed && !addressTooShort
-            ? t('create.geocoding_failed')
-            : t('create.map_hint')}
-      </Text>
+      {(isGeocoding || isReverseGeocoding || (geocodeFailed && !addressTooShort)) && (
+        <Text style={styles.hint}>
+          {isGeocoding || isReverseGeocoding ? t('create.geocoding') : t('create.geocoding_failed')}
+        </Text>
+      )}
       <View style={{ marginBottom: spacing.md }}>
         <PostMap
           posts={[]}
-          // The pin is meant to be automatic (from geocodeAddress above) — tapping the
-          // map to place it manually is only enabled as a fallback once geocoding has
-          // actually failed for the typed address, not as a general way to set location.
-          onMapClick={geocodeFailed ? (lat, lng) => setLocation({ lat, lng }) : undefined}
+          // Manual pin placement is always available, not just as a fallback when geocoding
+          // fails — handleMapTap reverse-geocodes the tap so the address field and the pin
+          // stay coherent (the geocodeAddress effect above skips re-resolving that address).
+          onMapClick={handleMapTap}
           pickedLocation={location}
           height={220}
         />
       </View>
-      {!location && (
-        <View style={styles.center}>
-          <Pressable
-            style={styles.linkButton}
-            onPress={() => setLocation(DEFAULT_PICKUP_LOCATION)}>
-            <Text style={styles.linkButtonText}>{t('create.use_default_location')}</Text>
-          </Pressable>
-        </View>
-      )}
 
       <Text style={styles.label}>{t('create.pickup_date')}</Text>
       <DatePickerField
         value={pickupDate}
         onChange={setPickupDate}
         placeholder={t('create.pickup_date_placeholder')}
+        maxDaysAhead={MAX_PICKUP_DAYS_AHEAD}
       />
+      <Text style={styles.hint}>{t('create.pickup_date_hint', { count: 14 })}</Text>
+      {!pickupDateInRange && (
+        <Text style={styles.errorText}>
+          {t('errors.pickup_date_out_of_range', { count: MAX_PICKUP_DAYS_AHEAD })}
+        </Text>
+      )}
 
       <View style={styles.municipalBox}>
         <Text style={styles.municipalTitle}>{t('create.municipal_pickup_title')}</Text>
         <Text style={styles.municipalText}>{t('create.municipal_pickup_text')}</Text>
-        <Pressable
-          onPress={() => {
-            Linking.openURL(MUNICIPAL_PICKUP_URL).catch(() => setLinkError(t('errors.link_open_failed')));
-          }}>
-          <Text style={styles.municipalLink}>{t('create.municipal_pickup_link')} →</Text>
-        </Pressable>
-        {linkError && <Text style={styles.errorText}>{linkError}</Text>}
-      </View>
-
-      <View style={styles.trustBox}>
-        <Text style={{ fontSize: 18 }}>🛡️</Text>
-        <Text style={styles.trustText}>{t('create.trust_note')}</Text>
       </View>
 
       {submitError && <Text style={styles.errorText}>{submitError}</Text>}
@@ -343,8 +378,17 @@ const createStyles = (colors: ColorPalette) =>
     label: { fontFamily: fonts.headingSemibold, fontSize: 14, color: colors.text, marginBottom: spacing.sm, marginTop: spacing.sm },
     labelHint: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
     hint: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },
-    photoBox: {
-      height: 140,
+    photoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+    photoThumbBox: {
+      width: 100,
+      height: 100,
+      borderRadius: radius.lg,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+    },
+    photoAddBox: {
+      width: 100,
+      height: 100,
       borderRadius: radius.lg,
       borderWidth: 2,
       borderColor: colors.border,
@@ -352,9 +396,19 @@ const createStyles = (colors: ColorPalette) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
-      marginBottom: spacing.md,
-      overflow: 'hidden',
     },
+    photoRemoveButton: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    photoRemoveButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
     photoPreview: { width: '100%', height: '100%' },
     photoHint: { fontFamily: fonts.body, color: colors.textMuted, marginTop: spacing.xs, fontSize: 12 },
     input: {
@@ -380,9 +434,6 @@ const createStyles = (colors: ColorPalette) =>
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary, ...shadow.button },
     chipText: { fontFamily: fonts.label, color: colors.text, fontSize: 13 },
     chipTextActive: { color: '#fff' },
-    center: { alignItems: 'center', marginBottom: spacing.md },
-    linkButton: { paddingVertical: spacing.xs },
-    linkButtonText: { fontFamily: fonts.label, color: colors.primary, fontSize: 13 },
     municipalBox: {
       backgroundColor: colors.surfaceMuted,
       borderRadius: radius.md,
@@ -391,17 +442,6 @@ const createStyles = (colors: ColorPalette) =>
     },
     municipalTitle: { fontFamily: fonts.headingSemibold, fontSize: 13, color: colors.text, marginBottom: 4 },
     municipalText: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted, lineHeight: 17, marginBottom: spacing.xs },
-    municipalLink: { fontFamily: fonts.label, fontSize: 12, color: colors.primary },
-    trustBox: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      backgroundColor: colors.secondaryContainer,
-      borderRadius: radius.md,
-      padding: spacing.md,
-      alignItems: 'center',
-      marginBottom: spacing.lg,
-    },
-    trustText: { fontFamily: fonts.body, flex: 1, fontSize: 12, color: colors.primaryDark },
     errorText: {
       fontFamily: fonts.body,
       fontSize: 12,

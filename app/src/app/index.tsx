@@ -8,7 +8,7 @@ import PostMap from '@/components/PostMap';
 import { usePosts } from '@/context/posts-context';
 import { useTheme } from '@/context/theme-context';
 import { useUserLocation } from '@/hooks/useUserLocation';
-import { fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
+import { fabSize, fonts, radius, shadow, spacing, type ColorPalette } from '@/theme/colors';
 
 // Map-first home screen, modeled on Dott's minimal map UI: the map fills the whole
 // screen, app name floats over it, and the only other chrome is two floating
@@ -55,7 +55,7 @@ export default function MapScreen() {
         style={styles.profileFab}
         onPress={() => router.push('/profile')}>
         {/* Icon is always dark — the FAB itself stays white in both themes, like the header pill. */}
-        <IconUser size={17} color="#191C1C" />
+        <IconUser size={20} color="#191C1C" />
       </Pressable>
 
       <Pressable
@@ -63,13 +63,11 @@ export default function MapScreen() {
         accessibilityLabel={t('create.title')}
         style={styles.addFab}
         onPress={() => router.push('/create')}>
-        <IconPlus size={18} color="white" />
+        <IconPlus size={21} color="white" />
       </Pressable>
     </View>
   );
 }
-
-const FAB_SIZE = 34; // matches the map pin diameter
 
 const createStyles = (colors: ColorPalette) =>
   StyleSheet.create({
@@ -123,11 +121,11 @@ const createStyles = (colors: ColorPalette) =>
     profileFab: {
       position: 'absolute',
       right: spacing.md,
-      bottom: spacing.xl + FAB_SIZE + spacing.sm,
+      bottom: spacing.xl + fabSize + spacing.sm,
       zIndex: 2000,
-      width: FAB_SIZE,
-      height: FAB_SIZE,
-      borderRadius: FAB_SIZE / 2,
+      width: fabSize,
+      height: fabSize,
+      borderRadius: fabSize / 2,
       backgroundColor: 'white',
       alignItems: 'center',
       justifyContent: 'center',
@@ -138,9 +136,9 @@ const createStyles = (colors: ColorPalette) =>
       right: spacing.md,
       bottom: spacing.xl,
       zIndex: 2000,
-      width: FAB_SIZE,
-      height: FAB_SIZE,
-      borderRadius: FAB_SIZE / 2,
+      width: fabSize,
+      height: fabSize,
+      borderRadius: fabSize / 2,
       backgroundColor: colors.accentOrange,
       alignItems: 'center',
       justifyContent: 'center',

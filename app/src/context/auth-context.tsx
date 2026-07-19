@@ -7,13 +7,11 @@ type User = {
   id: string;
   name: string;
   email: string;
-  avatarUri: string | null;
 };
 
 type ProfileUpdate = {
   name: string;
   email: string;
-  avatarUri: string | null;
 };
 
 type AuthContextValue = {
@@ -53,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (password.length < MIN_PASSWORD_LENGTH) {
       throw new Error(i18n.t('errors.password_too_short', { count: MIN_PASSWORD_LENGTH }));
     }
-    const newUser: User = { id: `user-${Date.now()}`, name: trimmedName, email: trimmedEmail, avatarUri: null };
+    const newUser: User = { id: `user-${Date.now()}`, name: trimmedName, email: trimmedEmail };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
     setUser(newUser);
   };
@@ -69,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const trimmedEmail = update.email.trim().toLowerCase().slice(0, 120);
     if (!trimmedName) throw new Error(i18n.t('errors.name_required'));
     if (!EMAIL_RE.test(trimmedEmail)) throw new Error(i18n.t('errors.invalid_email'));
-    const updated: User = { ...user, name: trimmedName, email: trimmedEmail, avatarUri: update.avatarUri };
+    const updated: User = { ...user, name: trimmedName, email: trimmedEmail };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     setUser(updated);
   };

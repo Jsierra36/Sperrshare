@@ -38,3 +38,30 @@ export async function geocodeAddress(query: string, language: string): Promise<G
 
   return { lat, lng, displayName: first.display_name };
 }
+
+// Reverse geocoding for manually-placed pins (see create.tsx) — same free Nominatim
+// service as geocodeAddress above, no API key. zoom=17 asks Nominatim for street-level
+// results, so a tap that doesn't land exactly on a building still resolves to the
+// nearest known street rather than a broader (city/district) area.
+export async function reverseGeocode(lat: number, lng: number, language: string): Promise<string | null> {
+  const url = new URL('https://nominatim.openstreetmap.org/reverse');
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('lat', String(lat));
+  url.searchParams.set('lon', String(lng));
+  url.searchParams.set('zoom', '17');
+
+  const res = await fetch(url.toString(), {
+    headers: { 'Accept-Language': language },
+  });
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  const address = data?.address;
+  if (!address) return null;
+
+  const street = address.road || address.pedestrian || address.footway;
+  const houseNumber = address.house_number;
+  if (street) return houseNumber ? `${street} ${houseNumber}` : street;
+
+  return data.display_name ?? null;
+}

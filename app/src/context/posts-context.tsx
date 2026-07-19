@@ -5,8 +5,9 @@ import { seedPosts } from '@/data/seed-posts';
 import type { Post } from '@/data/types';
 import i18n from '@/i18n';
 
-const STORAGE_KEY = 'sperrshare.posts.v6'; // v6: 4 listings, verified real addresses, privacy-checked photos
+const STORAGE_KEY = 'sperrshare.posts.v7'; // v7: photoUri -> photoUris (1-3 photos)
 const EXPIRY_DAYS_WITHOUT_PICKUP_DATE = 14;
+const MAX_PHOTOS = 3;
 
 type NewPostInput = {
   userId: string;
@@ -17,7 +18,7 @@ type NewPostInput = {
   addressText: string;
   lat: number;
   lng: number;
-  photoUri: string;
+  photoUris: string[];
   pickupDate: string | null;
 };
 
@@ -64,10 +65,11 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     const description = input.description.trim().slice(0, 1000);
     const addressText = input.addressText.trim().slice(0, 200);
     const categoryIds = [...new Set(input.categoryIds)].slice(0, 20);
+    const photoUris = input.photoUris.slice(0, MAX_PHOTOS);
     if (!title) throw new Error(i18n.t('errors.title_required'));
     if (!addressText) throw new Error(i18n.t('errors.address_required'));
     if (categoryIds.length === 0) throw new Error(i18n.t('errors.category_required'));
-    if (!input.photoUri) throw new Error(i18n.t('errors.photo_required'));
+    if (photoUris.length === 0) throw new Error(i18n.t('errors.photo_required'));
     if (Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) {
       throw new Error(i18n.t('errors.invalid_coordinates'));
     }
@@ -79,6 +81,7 @@ export function PostsProvider({ children }: { children: ReactNode }) {
       description,
       addressText,
       categoryIds,
+      photoUris,
       id: `post-${Date.now()}`,
       status: 'active',
       createdAt,
@@ -95,10 +98,11 @@ export function PostsProvider({ children }: { children: ReactNode }) {
     const description = input.description.trim().slice(0, 1000);
     const addressText = input.addressText.trim().slice(0, 200);
     const categoryIds = [...new Set(input.categoryIds)].slice(0, 20);
+    const photoUris = input.photoUris.slice(0, MAX_PHOTOS);
     if (!title) throw new Error(i18n.t('errors.title_required'));
     if (!addressText) throw new Error(i18n.t('errors.address_required'));
     if (categoryIds.length === 0) throw new Error(i18n.t('errors.category_required'));
-    if (!input.photoUri) throw new Error(i18n.t('errors.photo_required'));
+    if (photoUris.length === 0) throw new Error(i18n.t('errors.photo_required'));
     if (Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) {
       throw new Error(i18n.t('errors.invalid_coordinates'));
     }
@@ -114,7 +118,7 @@ export function PostsProvider({ children }: { children: ReactNode }) {
               categoryIds,
               lat: input.lat,
               lng: input.lng,
-              photoUri: input.photoUri,
+              photoUris,
               pickupDate: input.pickupDate,
               expiresAt: computeExpiresAt(p.createdAt, input.pickupDate),
             }
