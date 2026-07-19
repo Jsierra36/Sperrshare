@@ -14,10 +14,6 @@ graphify-out/
 # going forward. Existing committed copies stay in git history unless asked to rewrite it.
 .claude/
 
-# Private local-only notes (password index, credentials inventory) — NEVER commit.
-# This repo is public; even a service-to-number mapping must not leave this machine.
-private/
-
 # OS
 .DS_Store
 Thumbs.db
