@@ -1,32 +1,24 @@
-# ============================================================================
-# WHITELIST MODE — everything in this repo is ignored unless explicitly
-# allowed below. This repo is PUBLIC (GitHub Pages needs it to be), so only
-# what the app needs to build and deploy may ever be committed:
-#
-#   app/       -> the React Native/Expo app (source)
-#   landing/   -> the static landing page
-#
-# Everything else — internal/ (strategy docs, design exports, reference
-# images), graphify-out/, .claude/, and ANY new folder created at the root —
-# is ignored automatically. To publish something new, add a !/rule here
-# deliberately; nothing becomes public by accident.
-# ============================================================================
+# This repo is PUBLIC (GitHub Pages). Only app/ and landing/ belong in it.
+# Layer 1 (this file): explicit ignores, readable by every tool.
+# Layer 2 (.git/info/exclude, local-only): a whitelist that ignores ANYTHING
+# at the root except app/, landing/ and this file — so new folders can never
+# be committed by accident from this machine.
 
-/*
-!/app
-!/landing
-!/.gitignore
+# Internal/private material — strategy docs, design exports, reference images
+internal/
 
-# --- Exclusions inside the whitelisted folders -------------------------------
+# Tool output (regenerate with `graphify update .`)
+graphify-out/
+
+# AI coding assistant tooling/config (dev-only)
+.claude/
+app/.claude/
 
 # Dependencies & build output
 app/node_modules/
 app/dist/
 app/.expo/
 app/expo-env.d.ts
-
-# AI coding assistant tooling/config (dev-only)
-app/.claude/
 
 # OS files (any level)
 .DS_Store
